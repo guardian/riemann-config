@@ -1,7 +1,7 @@
 
 (def alerta-endpoints
-	{:alert "http://monitoring.gudev.gnl/alerta/api/v2/alerts/alert.json"
-	:heartbeat "http://monitoring.gudev.gnl:80/alerta/api/v2/heartbeats/heartbeat.json"})
+	{:alert "http://monitoring/alerta/api/v2/alerts/alert.json"
+	:heartbeat "http://monitoring/alerta/api/v2/heartbeats/heartbeat.json"})
 
 (defn post-to-alerta
   "POST to the Alerta REST API."
