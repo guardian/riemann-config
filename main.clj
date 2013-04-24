@@ -1,7 +1,5 @@
 ; -*- mode: clojure; -*-
 ; vim: filetype=clojure
-(logging/init :file "riemann.log")
-
 (require '[clj-http.client :as client] 
 		 '[cheshire.core :as json]
 		 '[riemann.query :as query])

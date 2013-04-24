@@ -22,3 +22,13 @@ you need then please come and talk to us.
 
 Either way, once you are done, submit a pull request to the master branch. Once
 merged in it will get deployed to the monitoring servers.
+
+Testing changes
+---------------
+
+The main entry point is main.clj and this omits initialising the logging so
+that it can be specified on the server.
+
+The local-testing.config can be used for locally testing changes before 
+submitting, setting up a log file in your working directory.  Simply run
+Riemann with the local-testing.config as the command line parameter.
