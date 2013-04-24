@@ -11,6 +11,7 @@ The main tasks we use Riemann for are:
  * Roll-up (based on changed state etc)
  * Forwarding events into alerta (the central monitoring dashboard)
 
+
 Making changes
 --------------
 
@@ -22,6 +23,7 @@ you need then please come and talk to us.
 
 Either way, once you are done, submit a pull request to the master branch. Once
 merged in it will get deployed to the monitoring servers.
+
 
 Testing changes
 ---------------
