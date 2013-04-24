@@ -4,9 +4,6 @@
 		 '[cheshire.core :as json]
 		 '[riemann.query :as query])
 
-(def version "1.0.0")
-(def hostname (.getHostName (java.net.InetAddress/getLocalHost)))
-
 (include "alerta.clj")
 
 ; configure the various servers that we listen on
@@ -21,11 +18,15 @@
 ; assume that all incoming carbon metrics have a name in the form
 ; ENV.GRID.CLUSTER.HOSTNAME.SERVICE
 :parser-fn (fn [{:keys [service] :as event}]
-			(if-let [[env grid cluster host real-service]
-					   (clojure.string/split service #"\.")]
-				{:host (clojure.string/replace host #"_" ".")
-				 :service real-service
-				 :tags ["riemann:true" (str "environment:" env) (str "cluster:" cluster) (str "service:" grid)]}))
+              (if-let [[env grid cluster host metric]
+                       (clojure.string/split service #"\.")]
+                {:host (str env "-" host)
+                 :service metric
+                 :environment env
+                 :resource host
+                 :grid grid
+                 :tags [(str "cluster:" cluster)]
+                 }))
 )
 
 ; reap expired events every 10 seconds
