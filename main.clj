@@ -109,4 +109,8 @@
 				(splitp < metric
 					0 (add-description  "Puppet resources are failing" warning)
 					(add-description "Puppet is updating all resources" normal)))))
+
+	(streams
+		(with {:metric 1 :host nil :state "normal" :service "riemann events/sec"}
+			(rate 15 index)))
 )
