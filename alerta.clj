@@ -32,8 +32,8 @@
    :group "Performance"
    :value (:metric event)
    :severity (:state event)
-   :environment [(if (contains? event :environment) (:environment event) "INFRA")]
-   :service [(if (contains? event :grid) (:grid event) "Common")]
+   :environment [(get event :environment "INFRA")]
+   :service [(get event :service "Common")]
    :tags (:tags event)
    :text (:description event)
    :rawData event})
