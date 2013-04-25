@@ -33,7 +33,7 @@
    :value (:metric event)
    :severity (:state event)
    :environment [(get event :environment "INFRA")]
-   :service [(get event :service "Common")]
+   :service [(get event :grid "Common")]
    :tags (:tags event)
    :text (:description event)
    :rawData event})
