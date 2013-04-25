@@ -28,8 +28,8 @@
   {
    :origin (str "riemann/" hostname)
    :resource (:resource event)
-   :event (:service event)
-   :group "Performance"
+   :event (get event :event (:service event))
+   :group (get event :group "Performance")
    :value (:metric event)
    :severity (:state event)
    :environment [(get event :environment "INFRA")]

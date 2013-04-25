@@ -61,11 +61,11 @@
 ; thresholding
 (let [index (default :ttl 300 (update-index (index)))
 		dedup-alert (changed-state {:init "normal"} prn alerta)
-		informational (with :state "normal" dedup-alert)
-		normal (with :state "normal" dedup-alert)
-		warning (with :state "warning" dedup-alert)
-		major (with :state "major" dedup-alert)
-		critical (with :state "critical" dedup-alert)]
+		informational (fn [message] (with :state "normal" :description message dedup-alert))
+		normal (fn [message] (with :state "normal" :description message dedup-alert))
+		warning (fn [message] (with :state "warning" :description message dedup-alert))
+		major (fn [message] (with :state "major" :description message dedup-alert))
+		critical (fn [message] (with :state "critical" :description message dedup-alert))]
 	(streams
 		index)
 
@@ -85,31 +85,34 @@
 			(fn [e] 
 				(let [boot-threshold (- (now) 7200)]
 					(and (service-is "boottime" e) (> (:metric e) boot-threshold))))
-			informational))
+			(with {:event "SystemStart" :group "System"} (informational "System started less than 2 hours ago"))))
 
 	(streams
 		(where* (partial service-is "heartbeat")
-			(splitp < metric
-				90 critical
-				normal)))
+			(with {:event "GangliaHeartbeat" :group "Ganglia"}
+				(splitp < metric
+					90 (critical "No heartbeat from Ganglia agent for at least 90 seconds")
+					(normal "Heartbeat from Ganglia agent OK")))))
 
 	(streams
 		(where* (partial service-is "pup_last_run")
-			(let [last-run-threshold (- (now) 7200)
-				time-elapsed (fn [e] (- (now) (:metric e)))] 
-				(splitp > metric
-					last-run-threshold 
-						(switch-epoch-to-elapsed 
-							major)
-					(switch-epoch-to-elapsed
-						normal)))))
+			(with {:event "PuppetLastRun" :group "Puppet"}
+				(let [last-run-threshold (- (now) 7200)
+					time-elapsed (fn [e] (- (now) (:metric e)))]
+					(splitp > metric
+						last-run-threshold
+							(switch-epoch-to-elapsed
+								major "Puppet agent has not run for at least 2 hours")
+						(switch-epoch-to-elapsed
+							(normal "Puppet agent is OK")))))))
 
 	(streams
 		(by [:host :service]
-			(where* (partial service-is "pup_res_failed")
-				(splitp < metric
-					0 (add-description  "Puppet resources are failing" warning)
-					(add-description "Puppet is updating all resources" normal)))))
+			(with {:event "PuppetResFailed" :group "Puppet"}
+				(where* (partial service-is "pup_res_failed")
+					(splitp < metric
+						0 (warning "Puppet resources are failing")
+						(normal "Puppet is updating all resources"))))))
 
 	(streams
 		(with {:metric 1 :host nil :state "normal" :service "riemann events/sec"}
