@@ -112,8 +112,9 @@
 )
 
 (streams
-	(moving-time-window 15
-		(by [:host]
+	(by [:host]	
+		(moving-time-window 15
+
 			(smap (fn [events] (
 				(let [success-service-name "gu_200_ok_request_status_rate-frontend"
 					error-service-name "gu_js_diagnostics_rate-frontend"
