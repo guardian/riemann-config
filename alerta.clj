@@ -1,3 +1,9 @@
+; -*- mode: clojure; -*-
+; vim: filetype=clojure
+
+(def version "1.0.0")
+
+(def hostname (.getHostName (java.net.InetAddress/getLocalHost)))
 
 (def alerta-endpoints
 	{:alert "http://monitoring/alerta/api/v2/alerts/alert.json"
@@ -20,22 +26,14 @@
   "Formats an event for Alerta."
   [event]
   {
-   :origin "riemann"
-   :resource (:host event)
+   :origin (str "riemann/" hostname)
+   :resource (:resource event)
    :event (:service event)
-   :group "Performance"      ; parse from metric name or tags?
+   :group "Performance"
    :value (:metric event)
    :severity (:state event)
-   :environment 
-   	[(if-let [env-tag (first (filter #(re-matches #"^environment:.*" %) (:tags event)))]
-   		(last (clojure.string/split env-tag #":"))
-   		"INFRA"
-   	)]
-   :service
-    [(if-let [env-tag (first (filter #(re-matches #"^service:.*" %) (:tags event)))]
-   		(last (clojure.string/split env-tag #":"))
-   		"Common"
-   	)]
+   :environment [(get event :environment "INFRA")]
+   :service [(get event :grid "Common")]
    :tags (:tags event)
    :text (:description event)
    :rawData event})
