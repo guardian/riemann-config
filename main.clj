@@ -117,4 +117,29 @@
 	(streams
 		(with {:metric 1 :host nil :state "normal" :service "riemann events/sec"}
 			(rate 15 index)))
-)
+
+	(streams
+		(by [:host]	
+			(moving-time-window 15
+
+				(smap (fn [events]
+					(let [success-service-name "gu_200_ok_request_status_rate-frontend"
+						error-service-name "gu_js_diagnostics_rate-frontend"
+						service-filter (fn [service-name event] (and (:metric event) (= service-name (:service event))))
+						sorted-events (->> events (sort-by :time) reverse)
+						last-success (->> sorted-events (filter (partial service-filter success-service-name)) first)
+						last-error (->> sorted-events (filter (partial service-filter error-service-name)) first)
+						threshold 0.1]
+						(if (and last-success last-error)
+							(let [ratio (double (/ (:metric last-error) (+ (:metric last-success) (:metric last-error))))
+									new-event {:host "riemann" :service "frontend_js_error_ratio" :metric ratio}]
+								(do
+									(info
+										(format "Events seen %d; ratio %f; status %s"
+											(count events)
+											ratio
+											(if (> ratio threshold) "bad" "okay")))
+									(if (> ratio threshold)
+										(call-rescue new-event (list critical))
+										(call-rescue new-event (list normal)))))))))))))
+
