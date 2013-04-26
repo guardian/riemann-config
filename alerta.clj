@@ -27,7 +27,7 @@
   [event]
   {
    :origin (str "riemann/" hostname)
-   :resource (:resource event)
+   :resource (:host event)
    :event (get event :event (:service event))
    :group (get event :group "Performance")
    :value (:metric event)
