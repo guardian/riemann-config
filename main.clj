@@ -61,11 +61,11 @@
 ; thresholding
 (let [index (default :ttl 300 (update-index (index)))
 		dedup-alert (changed-state {:init "normal"} prn alerta)
-		informational (fn [message] (with :state "normal" :description message dedup-alert))
-		normal (fn [message] (with :state "normal" :description message dedup-alert))
-		warning (fn [message] (with :state "warning" :description message dedup-alert))
-		major (fn [message] (with :state "major" :description message dedup-alert))
-		critical (fn [message] (with :state "critical" :description message dedup-alert))]
+		informational (fn [message] (with {:state "informational" :description message} dedup-alert))
+		normal (fn [message] (with {:state "normal" :description message} dedup-alert))
+		warning (fn [message] (with {:state "warning" :description message} dedup-alert))
+		major (fn [message] (with {:state "major" :description message} dedup-alert))
+		critical (fn [message] (with {:state "critical" :description message} dedup-alert))]
 	(streams
 		index)
 
@@ -102,7 +102,7 @@
 					(splitp > metric
 						last-run-threshold
 							(switch-epoch-to-elapsed
-								major "Puppet agent has not run for at least 2 hours")
+								(major "Puppet agent has not run for at least 2 hours"))
 						(switch-epoch-to-elapsed
 							(normal "Puppet agent is OK")))))))
 
