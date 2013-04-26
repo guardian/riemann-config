@@ -20,7 +20,7 @@
 :parser-fn (fn [{:keys [service] :as event}]
               (if-let [[env grid cluster host metric]
                        (clojure.string/split service #"\.")]
-                {:host (str env "-" host)
+                {:host host
                  :service metric
                  :environment env
                  :resource host
