@@ -25,7 +25,7 @@
                  :environment env
                  :resource host
                  :grid grid
-                 :tags [(str "cluster:" cluster)]
+                 :cluster cluster
                  }))
 )
 
@@ -61,9 +61,11 @@
 ; thresholding
 (let [index (default :ttl 300 (update-index (index)))
 		dedup-alert (changed-state {:init "normal"} prn alerta)
+		dedup-2-alert (runs 2 :state dedup-alert)
 		informational (fn [message] (with {:state "informational" :description message} dedup-alert))
 		normal (fn [message] (with {:state "normal" :description message} dedup-alert))
 		warning (fn [message] (with {:state "warning" :description message} dedup-alert))
+		minor (fn [message] (with {:state "minor" :description message} dedup-alert))
 		major (fn [message] (with {:state "major" :description message} dedup-alert))
 		critical (fn [message] (with {:state "critical" :description message} dedup-alert))]
 	(streams
@@ -88,17 +90,18 @@
 			(with {:event "SystemStart" :group "System"} (informational "System started less than 2 hours ago"))))
 
 	(streams
-		(where* (partial service-is "heartbeat")
-			(with {:event "GangliaHeartbeat" :group "Ganglia"}
+		(match :service "heartbeat"
+			(with {:event "GangliaHeartbeat" :group "Ganglia" :count 2}
 				(splitp < metric
 					90 (critical "No heartbeat from Ganglia agent for at least 90 seconds")
 					(normal "Heartbeat from Ganglia agent OK")))))
 
+	; TODO - GangliaTCPStatus - string based metric
+
 	(streams
-		(where* (partial service-is "pup_last_run")
+		(match :service "pup_last_run"
 			(with {:event "PuppetLastRun" :group "Puppet"}
-				(let [last-run-threshold (- (now) 7200)
-					time-elapsed (fn [e] (- (now) (:metric e)))]
+				(let [last-run-threshold (- (now) 7200)]
 					(splitp > metric
 						last-run-threshold
 							(switch-epoch-to-elapsed
@@ -107,12 +110,105 @@
 							(normal "Puppet agent is OK")))))))
 
 	(streams
-		(by [:host :service]
+		(match :service "pup_res_failed"
 			(with {:event "PuppetResFailed" :group "Puppet"}
-				(where* (partial service-is "pup_res_failed")
+				(splitp < metric
+					0 (warning "Puppet resources are failing")
+					(normal "Puppet is updating all resources")))))
+
+	(streams
+		(match :service "gu_metric_last"
+			(with {:event "GuMgmtMetrics" :group "Ganglia"}
+				(let [last-run-threshold (- (now) 300)]
+					(splitp > metric
+						last-run-threshold
+							(switch-epoch-to-elapsed
+								(minor "Guardian management status metrics have not been updated for more than 5 minutes"))
+						(switch-epoch-to-elapsed
+							(normal "Guardian management status metrics are OK")))))))
+
+	(streams
+		(match :service #"^fs_util-"
+			(with {:event "FsUtil" :group "OS"}
+				(splitp < metric
+					95 (critical "File system utilisation is very high")
+					90 (major "File system utilisation is high")
+					(normal "File system utilisation is OK")))))
+
+	(streams
+		(match :service #"^inode_util-"
+			(with {:event "InodeUtil" :group "OS"}
+				(splitp < metric
+					95 (critical "File system inode utilisation is very high")
+					90 (major "File system inode utilisation is high")
+					(normal "File system inode utilisation is OK")))))
+
+	(streams
+		(match :service "swap_util"
+			(with {:event "SwapUtil" :group "OS"}
+				(splitp < metric
+					90 (minor "Swap utilisation is very high")
+					(normal "Swap utilisation is OK")))))
+
+	; TODO - LoadHigh - references two metrics (one static, so look up from index??)
+
+	; TODO - SnapmirrorSync - ask nick what this is doing - seems to be comparing same metric to self
+
+	(streams
+		(match :service "df_percent-kb-capacity" ; TODO - in alerta config the split is disjoint
+			(with {:event "VolumeUsage" :group "netapp"}
+				(splitp < metric
+					90 (critical "Volume utilisation is very high")
+					85 (major "Volume utilisation is high")
+					(normal "Volume utilisation is OK")))))
+
+	; TODO - R2CurrentMode - string based metric
+
+	(streams
+		(match :service "gu_requests_timing_time-r2frontend"
+			(with {:event "ResponseTime" :group "Web"}
+				(splitp < metric
+					400 (minor "R2 response time is slow")
+					(normal "R2 response time is OK")))))
+	
+	; TODO - ResponseTime - for cluster
+
+	(streams
+		(match :service "gu_database_calls_time-r2frontend"
+			(with {:event "DbResponseTime" :group "Database"}
+				(splitp < metric
+					25 (minor "R2 database response time is slow")
+					(normal "R2 database response time is OK")))))
+
+	; TODO - check this - the alerta check seems non-sensical as it uses a static value	
+	; (streams
+	; 	(match :grid "Frontend"
+	; 		(with {:event "NgnixError" :group "Web"}
+	; 			(splitp < metric
+	; 				0 (major "There are status code 499 client errors")
+	; 				(normal "No status code 499 client errors")))))
+
+	(streams
+		(match :grid "Discussion"
+			(match :service "gu_httprequests_application_time-DiscussionApi"
+				(with {:event "ResponseTime" :group "Web"}
 					(splitp < metric
-						0 (warning "Puppet resources are failing")
-						(normal "Puppet is updating all resources"))))))
+						25 (minor "Discussion API response time is slow")
+						(normal "Discussion API response time is OK"))))))
+
+	; TODO - this needs to be a cluster calculation - maybe a moving window???
+	; (streams
+	; 	(match :grid "EC2"
+	; 		(match :environment "PROD"
+	; 			(match :cluster "contentapimq_eu-west-1"
+	; 				(match :service "gu_httprequests_application_time-DiscussionApi"
+	; 					(with {:event "MQRequestRate" :group "Application"}
+	; 						(splitp < metric
+	; 							50 (normal "Content API MQ total request rate is OK")
+	; 							(major "Content API MQ total request rate is low"))))))))
+
+	; TODO - 
+
 
 	(streams
 		(with {:metric 1 :host nil :state "normal" :service "riemann events/sec"}
