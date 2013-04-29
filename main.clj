@@ -31,7 +31,10 @@
                  }))
 )
 
-(def graph (graphite {:host hostname}))
+(def graph (graphite {
+	:host hostname
+	:path (fn [e] (str "riemann." (riemann.graphite/graphite-path-basic e)))
+	}))
 
 ; reap expired events every 10 seconds
 (periodically-expire 10)
@@ -215,8 +218,8 @@
 
 
 	(streams
-		(with {:metric 1 :host hostname :state "normal" :service "riemann events/sec"}
-			(rate 15 index graph)))
+		(with {:metric 1 :host hostname :state "normal" :service "riemann events_sec"}
+			(rate 10 index graph)))
 
 	(streams
 		(by [:host]	
