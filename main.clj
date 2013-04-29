@@ -94,6 +94,18 @@
 						:metric (count @hosts)}))))
 
 	(streams
+		(let [metrics (atom #{})]
+			(fn [event]
+				(swap! metrics conj {:host (:host event) :service (:service event)})
+				(index {:service "unique services"
+						:time (unix-time)
+						:metric (count @metrics)})
+				((throttle 1 5 graph) {:service "riemann unique_services"
+						:host hostname
+						:time (unix-time)
+						:metric (count @metrics)}))))
+
+	(streams
 		(where* 
 			(fn [e] 
 				(let [boot-threshold (- (now) 7200)]
