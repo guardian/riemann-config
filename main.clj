@@ -88,7 +88,7 @@
 				(index {:service "unique hosts"
 						:time (unix-time)
 						:metric (count @hosts)})
-				((throttle 1 5 graph) {:service "unique_hosts"
+				((throttle 1 5 graph) {:service "riemann unique_hosts"
 						:host hostname
 						:time (unix-time)
 						:metric (count @hosts)}))))
