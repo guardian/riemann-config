@@ -31,7 +31,7 @@
                  }))
 )
 
-(def graph (graphite))
+(def graph (graphite {:host hostname}))
 
 ; reap expired events every 10 seconds
 (periodically-expire 10)
