@@ -4,6 +4,8 @@
 		 '[cheshire.core :as json]
 		 '[riemann.query :as query])
 
+(def hostname (.getHostName (java.net.InetAddress/getLocalHost)))
+
 (include "alerta.clj")
 
 ; configure the various servers that we listen on
@@ -28,6 +30,8 @@
                  :cluster cluster
                  }))
 )
+
+(def graph (graphite))
 
 ; reap expired events every 10 seconds
 (periodically-expire 10)
@@ -211,8 +215,8 @@
 
 
 	(streams
-		(with {:metric 1 :host nil :state "normal" :service "riemann events/sec"}
-			(rate 15 index)))
+		(with {:metric 1 :host hostname :state "normal" :service "riemann events/sec"}
+			(rate 15 index graph)))
 
 	(streams
 		(by [:host]	
