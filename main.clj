@@ -188,8 +188,8 @@
 		(match :service "gu_requests_timing_time-r2frontend"
 			(with {:event "ResponseTime" :group "Web"}
 				(splitp < metric
-					400 (minor "R2 response time is slow" dedup-alert)
-					(normal "R2 response time is OK" dedup-alert)))))
+					400 (minor "R2 response time is slow" dedup-2-alert)
+					(normal "R2 response time is OK" dedup-2-alert)))))
 	
 	; TODO - ResponseTime - for cluster
 
@@ -197,8 +197,8 @@
 		(match :service "gu_database_calls_time-r2frontend"
 			(with {:event "DbResponseTime" :group "Database"}
 				(splitp < metric
-					25 (minor "R2 database response time is slow" dedup-alert)
-					(normal "R2 database response time is OK" dedup-alert)))))
+					25 (minor "R2 database response time is slow" dedup-2-alert)
+					(normal "R2 database response time is OK" dedup-2-alert)))))
 
 	; TODO - check this - the alerta check seems non-sensical as it uses a static value	
 	; (streams
@@ -213,8 +213,8 @@
 			(match :service "gu_httprequests_application_time-DiscussionApi"
 				(with {:event "ResponseTime" :group "Web"}
 					(splitp < metric
-						25 (minor "Discussion API response time is slow" dedup-alert)
-						(normal "Discussion API response time is OK" dedup-alert))))))
+						25 (minor "Discussion API response time is slow" dedup-2-alert)
+						(normal "Discussion API response time is OK" dedup-2-alert))))))
 
 	; TODO - this needs to be a cluster calculation - maybe a moving window???
 	; (streams
