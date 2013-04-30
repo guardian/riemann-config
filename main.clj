@@ -50,21 +50,6 @@
 	[& children]
 	(fn [e] ((apply with {:metric (- (now) (:metric e))} children) e)))
 
-(defn add-description
-	[description & children]
-	(fn [e] (apply with :description description children)))
-
-(defn puppet-failed-description [e]
-	(format "Puppet has not run for host %s" (:host e)))
-
-(defn gu-transform [f & children]
-	(fn [event] (let [transformed-event (f event)]
-		(call-rescue transformed-event children))))
-
-(defn puppet_update_fail []
-	(let [total-puppets (:metric (first (.search (:index @core) (query/ast "service=\"pup_res_total\""))))]
-	{:state "warning" :description (format "Puppet agent failed to update $pup_res_failed out of %d" total-puppets)}))
-
 (defn log
 	[e]
 	(info e))
