@@ -69,7 +69,7 @@
 ; thresholding
 (let [index (default :ttl 300 (update-index (index)))
 		dedup-alert (changed-state {:init "normal"} log-info alerta)
-		dedup-2-alert (by [:host :service] (runs 2 :state (changed :state log-info alerta)))]
+		dedup-2-alert (by [:host :service] (runs 2 :state (changed :state {:init "normal"} log-info alerta)))]
 	(streams
 		index)
 
