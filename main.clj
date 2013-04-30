@@ -44,8 +44,6 @@
 	(let [now (java.util.Date.)]
 		(Math/floor (/ (.getTime now) 1000))))
 
-(defn service-is [service e] (= service (get e :service "")))
-
 (defn switch-epoch-to-elapsed
 	[& children]
 	(fn [e] ((apply with {:metric (- (now) (:metric e))} children) e)))
@@ -95,11 +93,13 @@
 						:metric (count @metrics)}))))
 
 	(streams
-		(where* 
-			(fn [e] 
-				(let [boot-threshold (- (now) 7200)]
-					(and (service-is "boottime" e) (> (:metric e) boot-threshold))))
-			(with {:event "SystemStart" :group "System"} (informational "System started less than 2 hours ago"))))
+		(match :service "boottime"
+			(where* 
+				(fn [e] 
+					(let [boot-threshold (- (now) 7200)]
+						(> (:metric e) boot-threshold)))
+				(with {:event "SystemStart" :group "System"} 
+					(informational "System started less than 2 hours ago")))))
 
 	(streams
 		(match :service "heartbeat"
