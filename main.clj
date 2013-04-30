@@ -31,31 +31,33 @@
                  }))
 )
 
-(def graph (graphite {
-	:host hostname
-	:path (fn [e] (str "riemann." (riemann.graphite/graphite-path-basic e)))
-	}))
+(def graph
+	(if (resolve 'local-testing)
+		prn
+		(graphite {
+		:host hostname
+		:path (fn [e] (str "riemann." (riemann.graphite/graphite-path-basic e)))
+		})))
 
 ; reap expired events every 10 seconds
 (periodically-expire 10)
 
 ; some helpful functions
 (defn now []
-	(let [now (java.util.Date.)]
-		(Math/floor (/ (.getTime now) 1000))))
+		(Math/floor (/ (unix-time) 1000)))
 
 (defn switch-epoch-to-elapsed
 	[& children]
 	(fn [e] ((apply with {:metric (- (now) (:metric e))} children) e)))
 
-(defn log
+(defn log-info
 	[e]
 	(info e))
 
 ; thresholding
 (let [index (default :ttl 300 (update-index (index)))
-		dedup-alert (changed-state {:init "normal"} log alerta)
-		dedup-2-alert (by [:host :service] (runs 2 :state (changed :state log alerta)))
+		dedup-alert (changed-state {:init "normal"} log-info alerta)
+		dedup-2-alert (by [:host :service] (runs 2 :state (changed :state log-info alerta)))
 		informational (fn [message] (with {:state "informational" :description message} dedup-alert))
 		normal (fn [message] (with {:state "normal" :description message} dedup-alert))
 		warning (fn [message] (with {:state "warning" :description message} dedup-alert))
