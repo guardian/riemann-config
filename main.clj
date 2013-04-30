@@ -44,7 +44,7 @@
 
 ; some helpful functions
 (defn now []
-		(Math/floor (/ (unix-time) 1000)))
+		(Math/floor (unix-time)))
 
 (defn switch-epoch-to-elapsed
 	[& children]
