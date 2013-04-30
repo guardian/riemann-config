@@ -65,10 +65,14 @@
 	(let [total-puppets (:metric (first (.search (:index @core) (query/ast "service=\"pup_res_total\""))))]
 	{:state "warning" :description (format "Puppet agent failed to update $pup_res_failed out of %d" total-puppets)}))
 
+(defn log
+	[e]
+	(info e))
+
 ; thresholding
 (let [index (default :ttl 300 (update-index (index)))
-		dedup-alert (changed-state {:init "normal"} prn alerta)
-		dedup-2-alert (runs 2 :state dedup-alert)
+		dedup-alert (changed-state {:init "normal"} log alerta)
+		dedup-2-alert (by [:host :service] (runs 2 :state (changed :state log alerta)))
 		informational (fn [message] (with {:state "informational" :description message} dedup-alert))
 		normal (fn [message] (with {:state "normal" :description message} dedup-alert))
 		warning (fn [message] (with {:state "warning" :description message} dedup-alert))
