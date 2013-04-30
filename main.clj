@@ -66,10 +66,15 @@
 (def major (partial severity "major"))
 (def critical (partial severity "critical"))
 
+(defn edge-detection
+	[samples & children]
+	(fn [e] ((by [:host :service] (runs samples :state (changed :state {:init "normal"} children))) e)))
+
 ; thresholding
 (let [index (default :ttl 300 (update-index (index)))
-		dedup-alert (changed-state {:init "normal"} log-info alerta)
-		dedup-2-alert (by [:host :service] (runs 2 :state (changed :state {:init "normal"} log-info alerta)))]
+		dedup-alert (edge-detection 1 log-info alerta)
+		dedup-2-alert (edge-detection 2 log-info alerta)
+		dedup-4-alert (edge-detection 4 log-info alerta)]
 	(streams
 		index)
 
@@ -192,8 +197,8 @@
 		(match :service "gu_requests_timing_time-r2frontend"
 			(with {:event "ResponseTime" :group "Web"}
 				(splitp < metric
-					500 (minor "R2 response time is slow" dedup-2-alert)
-					(normal "R2 response time is OK" dedup-2-alert)))))
+					500 (minor "R2 response time is slow" dedup-4-alert)
+					(normal "R2 response time is OK" dedup-4-alert)))))
 	
 	; TODO - ResponseTime - for cluster
 
