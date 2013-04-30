@@ -74,6 +74,10 @@
 		index)
 
 	(streams
+		(expired
+			log-info))
+
+	(streams
 		(throttle 1 30 heartbeat))
 
 	(streams
