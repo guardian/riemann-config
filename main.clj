@@ -54,16 +54,22 @@
 	[e]
 	(info e))
 
+; set of severity functions
+(defn severity
+	[severity message & children]
+	(fn [e] ((apply with {:state severity :description message} children) e)))
+
+(def informational (partial severity "informational"))
+(def normal (partial severity "normal"))
+(def warning (partial severity "warning"))
+(def minor (partial severity "minor"))
+(def major (partial severity "major"))
+(def critical (partial severity "critical"))
+
 ; thresholding
 (let [index (default :ttl 300 (update-index (index)))
 		dedup-alert (changed-state {:init "normal"} log-info alerta)
-		dedup-2-alert (by [:host :service] (runs 2 :state (changed :state log-info alerta)))
-		informational (fn [message] (with {:state "informational" :description message} dedup-alert))
-		normal (fn [message] (with {:state "normal" :description message} dedup-alert))
-		warning (fn [message] (with {:state "warning" :description message} dedup-alert))
-		minor (fn [message] (with {:state "minor" :description message} dedup-alert))
-		major (fn [message] (with {:state "major" :description message} dedup-alert))
-		critical (fn [message] (with {:state "critical" :description message} dedup-alert))]
+		dedup-2-alert (by [:host :service] (runs 2 :state (changed :state log-info alerta)))]
 	(streams
 		index)
 
@@ -101,14 +107,14 @@
 					(let [boot-threshold (- (now) 7200)]
 						(> (:metric e) boot-threshold)))
 				(with {:event "SystemStart" :group "System"} 
-					(informational "System started less than 2 hours ago")))))
+					(informational "System started less than 2 hours ago" dedup-alert)))))
 
 	(streams
 		(match :service "heartbeat"
 			(with {:event "GangliaHeartbeat" :group "Ganglia" :count 2}
 				(splitp < metric
-					90 (critical "No heartbeat from Ganglia agent for at least 90 seconds")
-					(normal "Heartbeat from Ganglia agent OK")))))
+					90 (critical "No heartbeat from Ganglia agent for at least 90 seconds" dedup-alert)
+					(normal "Heartbeat from Ganglia agent OK" dedup-alert)))))
 
 	; TODO - GangliaTCPStatus - string based metric
 
@@ -119,16 +125,16 @@
 					(splitp > metric
 						last-run-threshold
 							(switch-epoch-to-elapsed
-								(major "Puppet agent has not run for at least 2 hours"))
+								(major "Puppet agent has not run for at least 2 hours" dedup-alert))
 						(switch-epoch-to-elapsed
-							(normal "Puppet agent is OK")))))))
+							(normal "Puppet agent is OK" dedup-alert)))))))
 
 	(streams
 		(match :service "pup_res_failed"
 			(with {:event "PuppetResFailed" :group "Puppet"}
 				(splitp < metric
-					0 (warning "Puppet resources are failing")
-					(normal "Puppet is updating all resources")))))
+					0 (warning "Puppet resources are failing" dedup-alert)
+					(normal "Puppet is updating all resources" dedup-alert)))))
 
 	(streams
 		(match :service "gu_metric_last"
@@ -137,32 +143,32 @@
 					(splitp > metric
 						last-run-threshold
 							(switch-epoch-to-elapsed
-								(minor "Guardian management status metrics have not been updated for more than 5 minutes"))
+								(minor "Guardian management status metrics have not been updated for more than 5 minutes" dedup-alert))
 						(switch-epoch-to-elapsed
-							(normal "Guardian management status metrics are OK")))))))
+							(normal "Guardian management status metrics are OK" dedup-alert)))))))
 
 	(streams
 		(match :service #"^fs_util-"
 			(with {:event "FsUtil" :group "OS"}
 				(splitp < metric
-					95 (critical "File system utilisation is very high")
-					90 (major "File system utilisation is high")
-					(normal "File system utilisation is OK")))))
+					95 (critical "File system utilisation is very high" dedup-alert)
+					90 (major "File system utilisation is high" dedup-alert)
+					(normal "File system utilisation is OK" dedup-alert)))))
 
 	(streams
 		(match :service #"^inode_util-"
 			(with {:event "InodeUtil" :group "OS"}
 				(splitp < metric
-					95 (critical "File system inode utilisation is very high")
-					90 (major "File system inode utilisation is high")
-					(normal "File system inode utilisation is OK")))))
+					95 (critical "File system inode utilisation is very high" dedup-alert)
+					90 (major "File system inode utilisation is high" dedup-alert)
+					(normal "File system inode utilisation is OK" dedup-alert)))))
 
 	(streams
 		(match :service "swap_util"
 			(with {:event "SwapUtil" :group "OS"}
 				(splitp < metric
-					90 (minor "Swap utilisation is very high")
-					(normal "Swap utilisation is OK")))))
+					90 (minor "Swap utilisation is very high" dedup-alert)
+					(normal "Swap utilisation is OK" dedup-alert)))))
 
 	; TODO - LoadHigh - references two metrics (one static, so look up from index??)
 
@@ -172,9 +178,9 @@
 		(match :service "df_percent-kb-capacity" ; TODO - in alerta config the split is disjoint
 			(with {:event "VolumeUsage" :group "netapp"}
 				(splitp < metric
-					90 (critical "Volume utilisation is very high")
-					85 (major "Volume utilisation is high")
-					(normal "Volume utilisation is OK")))))
+					90 (critical "Volume utilisation is very high" dedup-alert)
+					85 (major "Volume utilisation is high" dedup-alert)
+					(normal "Volume utilisation is OK" dedup-alert)))))
 
 	; TODO - R2CurrentMode - string based metric
 
@@ -182,8 +188,8 @@
 		(match :service "gu_requests_timing_time-r2frontend"
 			(with {:event "ResponseTime" :group "Web"}
 				(splitp < metric
-					400 (minor "R2 response time is slow")
-					(normal "R2 response time is OK")))))
+					400 (minor "R2 response time is slow" dedup-alert)
+					(normal "R2 response time is OK" dedup-alert)))))
 	
 	; TODO - ResponseTime - for cluster
 
@@ -191,8 +197,8 @@
 		(match :service "gu_database_calls_time-r2frontend"
 			(with {:event "DbResponseTime" :group "Database"}
 				(splitp < metric
-					25 (minor "R2 database response time is slow")
-					(normal "R2 database response time is OK")))))
+					25 (minor "R2 database response time is slow" dedup-alert)
+					(normal "R2 database response time is OK" dedup-alert)))))
 
 	; TODO - check this - the alerta check seems non-sensical as it uses a static value	
 	; (streams
@@ -207,8 +213,8 @@
 			(match :service "gu_httprequests_application_time-DiscussionApi"
 				(with {:event "ResponseTime" :group "Web"}
 					(splitp < metric
-						25 (minor "Discussion API response time is slow")
-						(normal "Discussion API response time is OK"))))))
+						25 (minor "Discussion API response time is slow" dedup-alert)
+						(normal "Discussion API response time is OK" dedup-alert))))))
 
 	; TODO - this needs to be a cluster calculation - maybe a moving window???
 	; (streams
@@ -250,6 +256,6 @@
 											ratio
 											(if (> ratio threshold) "bad" "okay")))
 									(if (> ratio threshold)
-										(call-rescue new-event (list critical))
-										(call-rescue new-event (list normal)))))))))))))
+										(call-rescue new-event (list (critical "JS error rate unexpectedly high" dedup-alert)))
+										(call-rescue new-event (list (normal "JS error rate within limits" dedup-alert))))))))))))))
 
