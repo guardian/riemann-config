@@ -3,8 +3,6 @@
 
 (def version "1.0.0")
 
-(def hostname (.getHostName (java.net.InetAddress/getLocalHost)))
-
 (def alerta-endpoints
 	{:alert "http://monitoring/alerta/api/v2/alerts/alert.json"
 	:heartbeat "http://monitoring/alerta/api/v2/heartbeats/heartbeat.json"})

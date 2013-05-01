@@ -4,11 +4,13 @@
 		 '[cheshire.core :as json]
 		 '[riemann.query :as query])
 
+(def hostname (.getHostName (java.net.InetAddress/getLocalHost)))
+
 (include "alerta.clj")
 
 ; configure the various servers that we listen on
-(tcp-server)
-(udp-server)
+(tcp-server :host "0.0.0.0")
+(udp-server :host "0.0.0.0")
 (ws-server)
 (repl-server)
 ; listen on the carbon protocol
@@ -29,47 +31,57 @@
                  }))
 )
 
+(def graph
+	(if (resolve 'local-testing)
+		prn
+		(graphite {
+		:host hostname
+		:path (fn [e] (str "riemann." (riemann.graphite/graphite-path-basic e)))
+		})))
+
 ; reap expired events every 10 seconds
-(periodically-expire 10)
+(periodically-expire 10 {:keep-keys [:host :service :index-time]})
 
 ; some helpful functions
 (defn now []
-	(let [now (java.util.Date.)]
-		(Math/floor (/ (.getTime now) 1000))))
-
-(defn service-is [service e] (= service (get e :service "")))
+		(Math/floor (unix-time)))
 
 (defn switch-epoch-to-elapsed
 	[& children]
 	(fn [e] ((apply with {:metric (- (now) (:metric e))} children) e)))
 
-(defn add-description
-	[description & children]
-	(fn [e] (apply with :description description children)))
+(defn log-info
+	[e]
+	(info e))
 
-(defn puppet-failed-description [e]
-	(format "Puppet has not run for host %s" (:host e)))
+; set of severity functions
+(defn severity
+	[severity message & children]
+	(fn [e] ((apply with {:state severity :description message} children) e)))
 
-(defn gu-transform [f & children]
-	(fn [event] (let [transformed-event (f event)]
-		(call-rescue transformed-event children))))
+(def informational (partial severity "informational"))
+(def normal (partial severity "normal"))
+(def warning (partial severity "warning"))
+(def minor (partial severity "minor"))
+(def major (partial severity "major"))
+(def critical (partial severity "critical"))
 
-(defn puppet_update_fail []
-	(let [total-puppets (:metric (first (.search (:index @core) (query/ast "service=\"pup_res_total\""))))]
-	{:state "warning" :description (format "Puppet agent failed to update $pup_res_failed out of %d" total-puppets)}))
+(defn edge-detection
+	[samples & children]
+	(let [detector (by [:host :service] (runs samples :state (apply changed :state {:init "normal"} children)))]
+		(fn [e] (detector e))))
 
 ; thresholding
-(let [index (default :ttl 300 (update-index (index)))
-		dedup-alert (changed-state {:init "normal"} prn alerta)
-		dedup-2-alert (runs 2 :state dedup-alert)
-		informational (fn [message] (with {:state "informational" :description message} dedup-alert))
-		normal (fn [message] (with {:state "normal" :description message} dedup-alert))
-		warning (fn [message] (with {:state "warning" :description message} dedup-alert))
-		minor (fn [message] (with {:state "minor" :description message} dedup-alert))
-		major (fn [message] (with {:state "major" :description message} dedup-alert))
-		critical (fn [message] (with {:state "critical" :description message} dedup-alert))]
+(let [index (default :ttl 900 (update-index (index)))
+		dedup-alert (edge-detection 1 log-info alerta)
+		dedup-2-alert (edge-detection 2 log-info alerta)
+		dedup-4-alert (edge-detection 4 log-info alerta)]
 	(streams
-		index)
+		(with :index-time (format "%.0f" (now)) index))
+
+	(streams
+		(expired
+			log-info))
 
 	(streams
 		(throttle 1 30 heartbeat))
@@ -80,105 +92,141 @@
 				(swap! hosts conj (:host event))
 				(index {:service "unique hosts"
 						:time (unix-time)
+						:metric (count @hosts)})
+				((throttle 1 5 graph) {:service "riemann unique_hosts"
+						:host hostname
+						:time (unix-time)
 						:metric (count @hosts)}))))
 
 	(streams
-		(where* 
-			(fn [e] 
-				(let [boot-threshold (- (now) 7200)]
-					(and (service-is "boottime" e) (> (:metric e) boot-threshold))))
-			(with {:event "SystemStart" :group "System"} (informational "System started less than 2 hours ago"))))
+		(let [metrics (atom #{})]
+			(fn [event]
+				(swap! metrics conj {:host (:host event) :service (:service event)})
+				(index {:service "unique services"
+						:time (unix-time)
+						:metric (count @metrics)})
+				((throttle 1 5 graph) {:service "riemann unique_services"
+						:host hostname
+						:time (unix-time)
+						:metric (count @metrics)}))))
 
 	(streams
-		(match :service "heartbeat"
-			(with {:event "GangliaHeartbeat" :group "Ganglia" :count 2}
-				(splitp < metric
-					90 (critical "No heartbeat from Ganglia agent for at least 90 seconds")
-					(normal "Heartbeat from Ganglia agent OK")))))
+		(let [boot-threshold 
+				(match :service "boottime"
+					(where* 
+						(fn [e] 
+							(let [boot-threshold (- (now) 7200)]
+								(> (:metric e) boot-threshold)))
+						(with {:event "SystemStart" :group "System"} 
+							(informational "System started less than 2 hours ago" dedup-alert))))
 
-	; TODO - GangliaTCPStatus - string based metric
+			heartbeat
+				(match :service "heartbeat"
+					(with {:event "GangliaHeartbeat" :group "Ganglia" :count 2}
+						(splitp < metric
+							90 (critical "No heartbeat from Ganglia agent for at least 90 seconds" dedup-alert)
+							(normal "Heartbeat from Ganglia agent OK" dedup-alert))))
 
-	(streams
-		(match :service "pup_last_run"
-			(with {:event "PuppetLastRun" :group "Puppet"}
-				(let [last-run-threshold (- (now) 7200)]
-					(splitp > metric
-						last-run-threshold
-							(switch-epoch-to-elapsed
-								(major "Puppet agent has not run for at least 2 hours"))
-						(switch-epoch-to-elapsed
-							(normal "Puppet agent is OK")))))))
+			puppet-last-run
+				(match :service "pup_last_run"
+					(with {:event "PuppetLastRun" :group "Puppet"}
+						(let [last-run-threshold (- (now) 7200)]
+							(splitp > metric
+								last-run-threshold
+									(switch-epoch-to-elapsed
+										(major "Puppet agent has not run for at least 2 hours" dedup-alert))
+								(switch-epoch-to-elapsed
+									(normal "Puppet agent is OK" dedup-alert))))))
+			puppet-resource-failed
+				(match :service "pup_res_failed"
+					(with {:event "PuppetResFailed" :group "Puppet"}
+						(splitp < metric
+							0 (warning "Puppet resources are failing" dedup-alert)
+							(normal "Puppet is updating all resources" dedup-alert))))
 
-	(streams
-		(match :service "pup_res_failed"
-			(with {:event "PuppetResFailed" :group "Puppet"}
-				(splitp < metric
-					0 (warning "Puppet resources are failing")
-					(normal "Puppet is updating all resources")))))
+			last-gumetric-collection
+				(match :service "gu_metric_last"
+					(with {:event "GuMgmtMetrics" :group "Ganglia"}
+						(let [last-run-threshold (- (now) 300)]
+							(splitp > metric
+								last-run-threshold
+									(switch-epoch-to-elapsed
+										(minor "Guardian management status metrics have not been updated for more than 5 minutes" dedup-alert))
+								(switch-epoch-to-elapsed
+									(normal "Guardian management status metrics are OK" dedup-alert))))))
 
-	(streams
-		(match :service "gu_metric_last"
-			(with {:event "GuMgmtMetrics" :group "Ganglia"}
-				(let [last-run-threshold (- (now) 300)]
-					(splitp > metric
-						last-run-threshold
-							(switch-epoch-to-elapsed
-								(minor "Guardian management status metrics have not been updated for more than 5 minutes"))
-						(switch-epoch-to-elapsed
-							(normal "Guardian management status metrics are OK")))))))
+			fs-util
+				(match :service #"^fs_util-"
+					(with {:event "FsUtil" :group "OS"}
+						(splitp < metric
+							95 (critical "File system utilisation is very high" dedup-alert)
+							90 (major "File system utilisation is high" dedup-alert)
+							(normal "File system utilisation is OK" dedup-alert))))
 
-	(streams
-		(match :service #"^fs_util-"
-			(with {:event "FsUtil" :group "OS"}
-				(splitp < metric
-					95 (critical "File system utilisation is very high")
-					90 (major "File system utilisation is high")
-					(normal "File system utilisation is OK")))))
+			inode-util
+				(match :service #"^inode_util-"
+					(with {:event "InodeUtil" :group "OS"}
+						(splitp < metric
+							95 (critical "File system inode utilisation is very high" dedup-alert)
+							90 (major "File system inode utilisation is high" dedup-alert)
+							(normal "File system inode utilisation is OK" dedup-alert))))
+			swap-util
+				(match :service "swap_util"
+					(with {:event "SwapUtil" :group "OS"}
+						(splitp < metric
+							90 (minor "Swap utilisation is very high" dedup-alert)
+							(normal "Swap utilisation is OK" dedup-alert))))
+				
+			volume-util
+				(match :service "df_percent-kb-capacity" ; TODO - in alerta config the split is disjoint
+					(with {:event "VolumeUsage" :group "netapp"}
+						(splitp < metric
+							90 (critical "Volume utilisation is very high" dedup-alert)
+							85 (major "Volume utilisation is high" dedup-alert)
+							(normal "Volume utilisation is OK" dedup-alert))))
 
-	(streams
-		(match :service #"^inode_util-"
-			(with {:event "InodeUtil" :group "OS"}
-				(splitp < metric
-					95 (critical "File system inode utilisation is very high")
-					90 (major "File system inode utilisation is high")
-					(normal "File system inode utilisation is OK")))))
+			r2frontend-http-response-time
+				(match :service "gu_requests_timing_time-r2frontend"
+					(match :host #"respub"
+						(with {:event "ResponseTime" :group "Web"}
+							(splitp < metric
+								500 (minor "R2 response time is slow" dedup-4-alert)
+								(normal "R2 response time is OK" dedup-4-alert)))))
 
-	(streams
-		(match :service "swap_util"
-			(with {:event "SwapUtil" :group "OS"}
-				(splitp < metric
-					90 (minor "Swap utilisation is very high")
-					(normal "Swap utilisation is OK")))))
+			r2frontend-db-response-time
+				(match :service "gu_database_calls_time-r2frontend"
+					(with {:event "DbResponseTime" :group "Database"}
+						(splitp < metric
+							30 (minor "R2 database response time is slow" dedup-2-alert)
+							(normal "R2 database response time is OK" dedup-2-alert))))
 
-	; TODO - LoadHigh - references two metrics (one static, so look up from index??)
+			discussionapi-http-response-time
+				(match :grid "Discussion"
+					(match :service "gu_httprequests_application_time-DiscussionApi"
+						(with {:event "ResponseTime" :group "Web"}
+							(splitp < metric
+								50 (minor "Discussion API response time is slow" dedup-2-alert)
+								(normal "Discussion API response time is OK" dedup-2-alert)))))]
 
-	; TODO - SnapmirrorSync - ask nick what this is doing - seems to be comparing same metric to self
+		(where (not (state "expired"))
+			boot-threshold
+			heartbeat
+			puppet-last-run
+			puppet-resource-failed
+			; TODO - GangliaTCPStatus - string based metric
+			last-gumetric-collection
+			fs-util
+			inode-util
+			swap-util
+			; TODO - LoadHigh - references two metrics (one static, so look up from index??)
+			; TODO - SnapmirrorSync - ask nick what this is doing - seems to be comparing same metric to self
+			volume-util
+			; TODO - R2CurrentMode - string based metric
+			r2frontend-http-response-time
+			; TODO - ResponseTime - for cluster
+			r2frontend-db-response-time
+			discussionapi-http-response-time)))
 
-	(streams
-		(match :service "df_percent-kb-capacity" ; TODO - in alerta config the split is disjoint
-			(with {:event "VolumeUsage" :group "netapp"}
-				(splitp < metric
-					90 (critical "Volume utilisation is very high")
-					85 (major "Volume utilisation is high")
-					(normal "Volume utilisation is OK")))))
-
-	; TODO - R2CurrentMode - string based metric
-
-	(streams
-		(match :service "gu_requests_timing_time-r2frontend"
-			(with {:event "ResponseTime" :group "Web"}
-				(splitp < metric
-					400 (minor "R2 response time is slow")
-					(normal "R2 response time is OK")))))
-	
-	; TODO - ResponseTime - for cluster
-
-	(streams
-		(match :service "gu_database_calls_time-r2frontend"
-			(with {:event "DbResponseTime" :group "Database"}
-				(splitp < metric
-					25 (minor "R2 database response time is slow")
-					(normal "R2 database response time is OK")))))
 
 	; TODO - check this - the alerta check seems non-sensical as it uses a static value	
 	; (streams
@@ -187,14 +235,6 @@
 	; 			(splitp < metric
 	; 				0 (major "There are status code 499 client errors")
 	; 				(normal "No status code 499 client errors")))))
-
-	(streams
-		(match :grid "Discussion"
-			(match :service "gu_httprequests_application_time-DiscussionApi"
-				(with {:event "ResponseTime" :group "Web"}
-					(splitp < metric
-						25 (minor "Discussion API response time is slow")
-						(normal "Discussion API response time is OK"))))))
 
 	; TODO - this needs to be a cluster calculation - maybe a moving window???
 	; (streams
@@ -207,12 +247,9 @@
 	; 							50 (normal "Content API MQ total request rate is OK")
 	; 							(major "Content API MQ total request rate is low"))))))))
 
-	; TODO - 
-
-
 	(streams
-		(with {:metric 1 :host nil :state "normal" :service "riemann events/sec"}
-			(rate 15 index)))
+		(with {:metric 1 :host hostname :state "normal" :service "riemann events_sec"}
+			(rate 10 index graph)))
 
 	(streams
 		(let [success-service-name "gu_200_ok_request_status_rate-frontend"
@@ -238,5 +275,3 @@
 											(if (> ratio threshold)
 												(call-rescue new-event (list critical))
 												(call-rescue new-event (list normal))))))))))))))
-
-
