@@ -68,7 +68,8 @@
 
 (defn edge-detection
 	[samples & children]
-	(fn [e] ((by [:host :service] (runs samples :state (apply changed :state {:init "normal"} children))) e)))
+	(let [detector (by [:host :service] (runs samples :state (apply changed :state {:init "normal"} children)))]
+		(fn [e] (detector e))))
 
 ; thresholding
 (let [index (default :ttl 300 (update-index (index)))
