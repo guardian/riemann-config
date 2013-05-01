@@ -217,8 +217,8 @@
 	(streams
 		(let [success-service-name "gu_200_ok_request_status_rate-frontend"
 			error-service-name "gu_js_diagnostics_rate-frontend"]
-			(by [:host]	
-				(match :service #{success-service-name error-service-name}
+			(where (and metric (or (service success-service-name) (service error-service-name)))
+				(by [:host]
 					(moving-time-window 15
 						(smap (fn [events]
 							(let [service-filter (fn [service-name event] (and (:metric event) (= service-name (:service event))))
