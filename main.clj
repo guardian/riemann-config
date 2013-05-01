@@ -166,7 +166,7 @@
 					(normal "File system utilisation is OK" dedup-alert)))))
 
 	(streams
-		(match :service #"^inode_util-"
+		(where (and (service #"^inode_util-") (not (state "expired")))
 			(with {:event "InodeUtil" :group "OS"}
 				(splitp < metric
 					95 (critical "File system inode utilisation is very high" dedup-alert)
