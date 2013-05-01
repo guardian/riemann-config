@@ -9,8 +9,8 @@
 (include "alerta.clj")
 
 ; configure the various servers that we listen on
-(tcp-server)
-(udp-server)
+(tcp-server :host "0.0.0.0")
+(udp-server :host "0.0.0.0")
 (ws-server)
 (repl-server)
 ; listen on the carbon protocol
@@ -72,7 +72,7 @@
 		(fn [e] (detector e))))
 
 ; thresholding
-(let [index (default :ttl 300 (update-index (index)))
+(let [index (default :ttl 900 (update-index (index)))
 		dedup-alert (edge-detection 1 log-info alerta)
 		dedup-2-alert (edge-detection 2 log-info alerta)
 		dedup-4-alert (edge-detection 4 log-info alerta)]
@@ -111,33 +111,39 @@
 						:metric (count @metrics)}))))
 
 	(streams
-		(match :service "boottime"
-			(where* 
-				(fn [e] 
-					(let [boot-threshold (- (now) 7200)]
-						(> (:metric e) boot-threshold)))
-				(with {:event "SystemStart" :group "System"} 
-					(informational "System started less than 2 hours ago" dedup-alert)))))
+		(let [boot-threshold 
+				(match :service "boottime"
+					(where* 
+						(fn [e] 
+							(let [boot-threshold (- (now) 7200)]
+								(> (:metric e) boot-threshold)))
+						(with {:event "SystemStart" :group "System"} 
+							(informational "System started less than 2 hours ago" dedup-alert))))
 
-	(streams
-		(match :service "heartbeat"
-			(with {:event "GangliaHeartbeat" :group "Ganglia" :count 2}
-				(splitp < metric
-					90 (critical "No heartbeat from Ganglia agent for at least 90 seconds" dedup-alert)
-					(normal "Heartbeat from Ganglia agent OK" dedup-alert)))))
+			heartbeat
+				(match :service "heartbeat"
+					(with {:event "GangliaHeartbeat" :group "Ganglia" :count 2}
+						(splitp < metric
+							90 (critical "No heartbeat from Ganglia agent for at least 90 seconds" dedup-alert)
+							(normal "Heartbeat from Ganglia agent OK" dedup-alert))))
+
+			puppet-last-run
+				(match :service "pup_last_run"
+					(with {:event "PuppetLastRun" :group "Puppet"}
+						(let [last-run-threshold (- (now) 7200)]
+							(splitp > metric
+								last-run-threshold
+									(switch-epoch-to-elapsed
+										(major "Puppet agent has not run for at least 2 hours" dedup-alert))
+								(switch-epoch-to-elapsed
+									(normal "Puppet agent is OK" dedup-alert))))))]
+
+		(where (not (state "expired"))
+			boot-threshold
+			heartbeat
+			puppet-last-run)))
 
 	; TODO - GangliaTCPStatus - string based metric
-
-	(streams
-		(match :service "pup_last_run"
-			(with {:event "PuppetLastRun" :group "Puppet"}
-				(let [last-run-threshold (- (now) 7200)]
-					(splitp > metric
-						last-run-threshold
-							(switch-epoch-to-elapsed
-								(major "Puppet agent has not run for at least 2 hours" dedup-alert))
-						(switch-epoch-to-elapsed
-							(normal "Puppet agent is OK" dedup-alert)))))))
 
 	(streams
 		(match :service "pup_res_failed"
