@@ -136,85 +136,96 @@
 									(switch-epoch-to-elapsed
 										(major "Puppet agent has not run for at least 2 hours" dedup-alert))
 								(switch-epoch-to-elapsed
-									(normal "Puppet agent is OK" dedup-alert))))))]
+									(normal "Puppet agent is OK" dedup-alert))))))
+			puppet-resource-failed
+				(match :service "pup_res_failed"
+					(with {:event "PuppetResFailed" :group "Puppet"}
+						(splitp < metric
+							0 (warning "Puppet resources are failing" dedup-alert)
+							(normal "Puppet is updating all resources" dedup-alert))))
+
+			last-gumetric-collection
+				(match :service "gu_metric_last"
+					(with {:event "GuMgmtMetrics" :group "Ganglia"}
+						(let [last-run-threshold (- (now) 300)]
+							(splitp > metric
+								last-run-threshold
+									(switch-epoch-to-elapsed
+										(minor "Guardian management status metrics have not been updated for more than 5 minutes" dedup-alert))
+								(switch-epoch-to-elapsed
+									(normal "Guardian management status metrics are OK" dedup-alert))))))
+
+			fs-util
+				(match :service #"^fs_util-"
+					(with {:event "FsUtil" :group "OS"}
+						(splitp < metric
+							95 (critical "File system utilisation is very high" dedup-alert)
+							90 (major "File system utilisation is high" dedup-alert)
+							(normal "File system utilisation is OK" dedup-alert))))
+
+			inode-util
+				(match :service #"^inode_util-"
+					(with {:event "InodeUtil" :group "OS"}
+						(splitp < metric
+							95 (critical "File system inode utilisation is very high" dedup-alert)
+							90 (major "File system inode utilisation is high" dedup-alert)
+							(normal "File system inode utilisation is OK" dedup-alert))))
+			swap-util
+				(match :service "swap_util"
+					(with {:event "SwapUtil" :group "OS"}
+						(splitp < metric
+							90 (minor "Swap utilisation is very high" dedup-alert)
+							(normal "Swap utilisation is OK" dedup-alert))))
+				
+			volume-util
+				(match :service "df_percent-kb-capacity" ; TODO - in alerta config the split is disjoint
+					(with {:event "VolumeUsage" :group "netapp"}
+						(splitp < metric
+							90 (critical "Volume utilisation is very high" dedup-alert)
+							85 (major "Volume utilisation is high" dedup-alert)
+							(normal "Volume utilisation is OK" dedup-alert))))
+
+			r2frontend-http-response-time
+				(match :service "gu_requests_timing_time-r2frontend"
+					(with {:event "ResponseTime" :group "Web"}
+						(splitp < metric
+							500 (minor "R2 response time is slow" dedup-4-alert)
+							(normal "R2 response time is OK" dedup-4-alert))))
+
+			r2frontend-db-response-time
+				(match :service "gu_database_calls_time-r2frontend"
+					(with {:event "DbResponseTime" :group "Database"}
+						(splitp < metric
+							30 (minor "R2 database response time is slow" dedup-2-alert)
+							(normal "R2 database response time is OK" dedup-2-alert))))
+
+			discussionapi-http-response-time
+				(match :grid "Discussion"
+					(match :service "gu_httprequests_application_time-DiscussionApi"
+						(with {:event "ResponseTime" :group "Web"}
+							(splitp < metric
+								30 (minor "Discussion API response time is slow" dedup-2-alert)
+								(normal "Discussion API response time is OK" dedup-2-alert)))))]
 
 		(where (not (state "expired"))
 			boot-threshold
 			heartbeat
-			puppet-last-run)))
+			puppet-last-run
+			puppet-resource-failed
+			; TODO - GangliaTCPStatus - string based metric
+			last-gumetric-collection
+			fs-util
+			inode-util
+			swap-util
+			; TODO - LoadHigh - references two metrics (one static, so look up from index??)
+			; TODO - SnapmirrorSync - ask nick what this is doing - seems to be comparing same metric to self
+			volume-util
+			; TODO - R2CurrentMode - string based metric
+			r2frontend-http-response-time
+			; TODO - ResponseTime - for cluster
+			r2frontend-db-response-time
+			discussionapi-http-response-time)))
 
-	; TODO - GangliaTCPStatus - string based metric
-
-	(streams
-		(match :service "pup_res_failed"
-			(with {:event "PuppetResFailed" :group "Puppet"}
-				(splitp < metric
-					0 (warning "Puppet resources are failing" dedup-alert)
-					(normal "Puppet is updating all resources" dedup-alert)))))
-
-	(streams
-		(match :service "gu_metric_last"
-			(with {:event "GuMgmtMetrics" :group "Ganglia"}
-				(let [last-run-threshold (- (now) 300)]
-					(splitp > metric
-						last-run-threshold
-							(switch-epoch-to-elapsed
-								(minor "Guardian management status metrics have not been updated for more than 5 minutes" dedup-alert))
-						(switch-epoch-to-elapsed
-							(normal "Guardian management status metrics are OK" dedup-alert)))))))
-
-	(streams
-		(match :service #"^fs_util-"
-			(with {:event "FsUtil" :group "OS"}
-				(splitp < metric
-					95 (critical "File system utilisation is very high" dedup-alert)
-					90 (major "File system utilisation is high" dedup-alert)
-					(normal "File system utilisation is OK" dedup-alert)))))
-
-	(streams
-		(where (and (service #"^inode_util-") (not (state "expired")))
-			(with {:event "InodeUtil" :group "OS"}
-				(splitp < metric
-					95 (critical "File system inode utilisation is very high" dedup-alert)
-					90 (major "File system inode utilisation is high" dedup-alert)
-					(normal "File system inode utilisation is OK" dedup-alert)))))
-
-	(streams
-		(match :service "swap_util"
-			(with {:event "SwapUtil" :group "OS"}
-				(splitp < metric
-					90 (minor "Swap utilisation is very high" dedup-alert)
-					(normal "Swap utilisation is OK" dedup-alert)))))
-
-	; TODO - LoadHigh - references two metrics (one static, so look up from index??)
-
-	; TODO - SnapmirrorSync - ask nick what this is doing - seems to be comparing same metric to self
-
-	(streams
-		(match :service "df_percent-kb-capacity" ; TODO - in alerta config the split is disjoint
-			(with {:event "VolumeUsage" :group "netapp"}
-				(splitp < metric
-					90 (critical "Volume utilisation is very high" dedup-alert)
-					85 (major "Volume utilisation is high" dedup-alert)
-					(normal "Volume utilisation is OK" dedup-alert)))))
-
-	; TODO - R2CurrentMode - string based metric
-
-	(streams
-		(match :service "gu_requests_timing_time-r2frontend"
-			(with {:event "ResponseTime" :group "Web"}
-				(splitp < metric
-					500 (minor "R2 response time is slow" dedup-4-alert)
-					(normal "R2 response time is OK" dedup-4-alert)))))
-	
-	; TODO - ResponseTime - for cluster
-
-	(streams
-		(match :service "gu_database_calls_time-r2frontend"
-			(with {:event "DbResponseTime" :group "Database"}
-				(splitp < metric
-					30 (minor "R2 database response time is slow" dedup-2-alert)
-					(normal "R2 database response time is OK" dedup-2-alert)))))
 
 	; TODO - check this - the alerta check seems non-sensical as it uses a static value	
 	; (streams
@@ -223,14 +234,6 @@
 	; 			(splitp < metric
 	; 				0 (major "There are status code 499 client errors")
 	; 				(normal "No status code 499 client errors")))))
-
-	(streams
-		(match :grid "Discussion"
-			(match :service "gu_httprequests_application_time-DiscussionApi"
-				(with {:event "ResponseTime" :group "Web"}
-					(splitp < metric
-						30 (minor "Discussion API response time is slow" dedup-2-alert)
-						(normal "Discussion API response time is OK" dedup-2-alert))))))
 
 	; TODO - this needs to be a cluster calculation - maybe a moving window???
 	; (streams
@@ -242,9 +245,6 @@
 	; 						(splitp < metric
 	; 							50 (normal "Content API MQ total request rate is OK")
 	; 							(major "Content API MQ total request rate is low"))))))))
-
-	; TODO - 
-
 
 	(streams
 		(with {:metric 1 :host hostname :state "normal" :service "riemann events_sec"}
