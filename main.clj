@@ -40,7 +40,7 @@
 		})))
 
 ; reap expired events every 10 seconds
-(periodically-expire 10)
+(periodically-expire 10 {:keep-keys [:host :service :index-time]})
 
 ; some helpful functions
 (defn now []
@@ -77,7 +77,7 @@
 		dedup-2-alert (edge-detection 2 log-info alerta)
 		dedup-4-alert (edge-detection 4 log-info alerta)]
 	(streams
-		index)
+		(with :index-time (format "%.0f" (now)) index))
 
 	(streams
 		(expired
