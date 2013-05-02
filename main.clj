@@ -255,6 +255,7 @@
 		(let [success-service-name "gu_200_ok_request_status_rate-frontend"
 			error-service-name "gu_js_diagnostics_rate-frontend"]
 			(where (and metric (or (service success-service-name) (service error-service-name)))
+				log-info
 				(by [:host]
 					(moving-time-window 15
 						(smap (fn [events]
