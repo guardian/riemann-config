@@ -283,10 +283,12 @@
 								threshold 0.10]
 								(if (and total-success total-error)
 									(let [ratio (double (/ (:metric total-error) (:metric total-success)))
-											new-event {:host "riemann" :service "frontend_js_error_ratio" :metric ratio :environment (:environment total-success)}]
+										  environment (:environment total-success)
+											new-event {:host "riemann" :service "frontend_js_error_ratio" :metric ratio :environment environment}]
 										(do
 											(info
-												(format "Events seen %d; ratio %f; status %s"
+												(format "%s: Events seen %d; ratio %f; status %s"
+													environment
 													(count events)
 													ratio
 													(if (> ratio threshold) "bad" "okay")))
