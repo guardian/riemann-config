@@ -189,7 +189,6 @@
 				(by [:host]
 					(match :service "load_five"
 						(lookup-metric "cpu_num"
-							prn
 							(split*
 								(fn [e] (< (* 6 (:cpu_num e)) (:metric e))) (critical "System 5-minute load average is very high" dedup-alert)
 								(fn [e] (< (* 4 (:cpu_num e)) (:metric e))) (major "System 5-minute load average is high" dedup-alert)
@@ -271,20 +270,19 @@
 			(rate 10 index graph)))
 
 	(streams
-		(let [success-service-name "gu_200_ok_request_status_rate-frontend"
-			error-service-name "gu_js_diagnostics_rate-frontend"]
+		(let [success-service-name #"^gu_200_ok_request_status_rate-frontend-"
+			error-service-name "gu_js_diagnostics_rate-frontend-diagnostics"]
 			(where (and metric (or (service success-service-name) (service error-service-name)))
 				log-info
-				(by [:host]
 					(moving-time-window 15
 						(smap (fn [events]
-							(let [service-filter (fn [service-name event] (and (:metric event) (= service-name (:service event))))
-								sorted-events (->> events (sort-by :time) reverse)
-								last-success (->> sorted-events (filter (partial service-filter success-service-name)) first)
-								last-error (->> sorted-events (filter (partial service-filter error-service-name)) first)
+							(let [service-filter (fn [service-name event] (riemann.common/match service-name (:service event)))
+								sum riemann.folds/sum
+								total-success (->> events (filter (partial service-filter success-service-name)) sum)
+								total-error (->> events (filter (partial service-filter error-service-name)) sum)
 								threshold 0.1]
-								(if (and last-success last-error)
-									(let [ratio (double (/ (:metric last-error) (+ (:metric last-success) (:metric last-error))))
+								(if (and total-success total-error)
+									(let [ratio (double (/ (:metric total-error) (:metric total-success)))
 											new-event {:host "riemann" :service "frontend_js_error_ratio" :metric ratio}]
 										(do
 											(info
@@ -294,4 +292,4 @@
 													(if (> ratio threshold) "bad" "okay")))
 											(if (> ratio threshold)
 												(call-rescue new-event [(critical "JS error rate unexpectedly high" dedup-alert)])
-												(call-rescue new-event [(normal "JS error rate within limits" dedup-alert)]))))))))))))))
+												(call-rescue new-event [(normal "JS error rate within limits" dedup-alert)])))))))))))))
