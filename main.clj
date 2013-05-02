@@ -295,6 +295,6 @@
 											(call-rescue new-event [(normal "JS error rate within limits" dedup-alert)]))))))))))))
 
 	(streams
-		(where service #"^gu_200_ok_request_status_rate-frontend-"
+		(where (service #"^gu_200_ok_request_status_rate-frontend-")
 			log-info))
 )
