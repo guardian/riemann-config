@@ -273,28 +273,23 @@
 		(let [success-service-name #"^gu_200_ok_request_status_rate-frontend-"
 			error-service-name "gu_js_diagnostics_rate-frontend-diagnostics"]
 			(where (and metric (or (service success-service-name) (service error-service-name)))
-				log-info
-				(moving-time-window 15
-					(smap (fn [events]
-						(let [service-filter (fn [service-name event] (riemann.common/match service-name (:service event)))
-							sum riemann.folds/sum
-							total-success (->> events (filter (partial service-filter success-service-name)) sum)
-							total-error (->> events (filter (partial service-filter error-service-name)) sum)
-							threshold 0.05]
-							(if (and total-success total-error)
-								(let [ratio (double (/ (:metric total-error) (:metric total-success)))
-										new-event {:host "riemann" :service "frontend_js_error_ratio" :metric ratio}]
-									(do
-										(info
-											(format "Events seen %d; ratio %f; status %s"
-												(count events)
-												ratio
-												(if (> ratio threshold) "bad" "okay")))
-										(if (> ratio threshold)
-											(call-rescue new-event [(critical "JS error rate unexpectedly high" dedup-alert)])
-											(call-rescue new-event [(normal "JS error rate within limits" dedup-alert)]))))))))))))
-
-	(streams
-		(where (service #"^gu_200_ok_request_status_rate-frontend-")
-			log-info))
-)
+				(by [:environment]
+					(moving-time-window 15
+						(smap (fn [events]
+							(let [service-filter (fn [service-name event] (riemann.common/match service-name (:service event)))
+								sum riemann.folds/sum
+								total-success (->> events (filter (partial service-filter success-service-name)) sum)
+								total-error (->> events (filter (partial service-filter error-service-name)) sum)
+								threshold 0.10]
+								(if (and total-success total-error)
+									(let [ratio (double (/ (:metric total-error) (:metric total-success)))
+											new-event {:host "riemann" :service "frontend_js_error_ratio" :metric ratio :environment (:environment total-success)}]
+										(do
+											(info
+												(format "Events seen %d; ratio %f; status %s"
+													(count events)
+													ratio
+													(if (> ratio threshold) "bad" "okay")))
+											(if (> ratio threshold)
+												(call-rescue new-event [(major "JS error rate unexpectedly high" dedup-4-alert)])
+												(call-rescue new-event [(normal "JS error rate within limits" dedup-4-alert)]))))))))))))))
