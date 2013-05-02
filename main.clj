@@ -273,5 +273,5 @@
 													ratio
 													(if (> ratio threshold) "bad" "okay")))
 											(if (> ratio threshold)
-												(call-rescue new-event (critical "JS error rate unexpectedly high" dedup-alert))
-												(call-rescue new-event (normal "JS error rate within limits" dedup-alert)))))))))))))))
+												(call-rescue new-event [(critical "JS error rate unexpectedly high" dedup-alert)])
+												(call-rescue new-event [(normal "JS error rate within limits" dedup-alert)]))))))))))))))
