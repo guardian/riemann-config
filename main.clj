@@ -274,7 +274,7 @@
 			error-service-name "gu_js_diagnostics_rate-frontend-diagnostics"]
 			(where (and metric (or (service success-service-name) (service error-service-name)))
 				(by [:environment]
-					(moving-time-window 15
+					(moving-time-window 60
 						(smap (fn [events]
 							(let [service-filter (fn [service-name event] (riemann.common/match service-name (:service event)))
 								sum riemann.folds/sum
