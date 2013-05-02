@@ -219,6 +219,13 @@
 			inode-util
 			swap-util
 			; TODO - LoadHigh - references two metrics (one static, so look up from index??)
+			(by [:host]
+				(match :service "load_five"
+					(let [cpus 4]
+						(splitp < metric
+							(* 6 cpus) (critical "System 5-minute load average is very high")
+							(* 4 cpus) (major "System 5-minute load average is high")
+							(normal "System 5-minute load average is OK")))))
 			; TODO - SnapmirrorSync - ask nick what this is doing - seems to be comparing same metric to self
 			volume-util
 			; TODO - R2CurrentMode - string based metric
