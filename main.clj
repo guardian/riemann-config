@@ -280,7 +280,7 @@
 								sum riemann.folds/sum
 								total-success (->> events (filter (partial service-filter success-service-name)) sum)
 								total-error (->> events (filter (partial service-filter error-service-name)) sum)
-								threshold 0.1]
+								threshold 0.05]
 								(if (and total-success total-error)
 									(let [ratio (double (/ (:metric total-error) (:metric total-success)))
 											new-event {:host "riemann" :service "frontend_js_error_ratio" :metric ratio}]
