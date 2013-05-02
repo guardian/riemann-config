@@ -50,6 +50,14 @@
 	[& children]
 	(fn [e] ((apply with {:metric (- (now) (:metric e))} children) e)))
 
+(defn lookup-metric
+	[metricname & children]
+	(let [metricsymbol (keyword metricname)]
+		(fn [e]
+			(let [metricevent (.lookup (:index @core) (:host e) metricname)]
+				(if-let [metricvalue (:metric metricevent)]
+					(call-rescue (assoc e metricsymbol metricvalue) children))))))
+
 (defn log-info
 	[e]
 	(info e))
@@ -177,6 +185,16 @@
 							90 (minor "Swap utilisation is very high" dedup-alert)
 							(normal "Swap utilisation is OK" dedup-alert))))
 				
+			cpu-load-five
+				(by [:host]
+					(match :service "load_five"
+						(lookup-metric "cpu_num"
+							prn
+							(split*
+								(fn [e] (< (* 6 (:cpu_num e)) (:metric e))) (critical "System 5-minute load average is very high" dedup-alert)
+								(fn [e] (< (* 4 (:cpu_num e)) (:metric e))) (major "System 5-minute load average is high" dedup-alert)
+								(normal "System 5-minute load average is OK" dedup-alert)))))
+
 			volume-util
 				(match :service "df_percent-kb-capacity" ; TODO - in alerta config the split is disjoint
 					(with {:event "VolumeUsage" :group "netapp"}
@@ -219,6 +237,7 @@
 			inode-util
 			swap-util
 			; TODO - LoadHigh - references two metrics (one static, so look up from index??)
+			cpu-load-five
 			; TODO - SnapmirrorSync - ask nick what this is doing - seems to be comparing same metric to self
 			volume-util
 			; TODO - R2CurrentMode - string based metric
