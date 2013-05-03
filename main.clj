@@ -235,8 +235,10 @@
 				(match :grid "Discussion"
 					(match :service "gu_httprequests_application_time-DiscussionApi"
 						(with {:event "ResponseTime" :group "Web"}
+							log-info
 							(moving-time-window 300
 								(combine riemann.folds/mean
+									log-info
 									(adjust set-resource-from-cluster
 										(splitp < metric
 											50 (minor "Discussion API cluster response time is slow" dedup-2-alert)
@@ -248,13 +250,12 @@
 									(= (:cluster e) "contentapimq_eu-west-1")
 									(= (:service e) "gu_httprequests_application_rate-Content-API")))
 					(with {:event "MQRequestRate" :group "Application"}
-						log-info
 						(fixed-time-window 15
 							(combine riemann.folds/sum
-								log-info
-								(splitp < metric
-									200 (normal "Content API MQ total request rate is OK" dedup-2-alert)
-									(major "Content API MQ total request rate is low" dedup-2-alert))))))]
+								(adjust set-resource-from-cluster
+									(splitp < metric
+										200 (normal "Content API MQ total request rate is OK" dedup-2-alert)
+										(major "Content API MQ total request rate is low" dedup-2-alert)))))))]
 
 		(where (not (state "expired"))
 			boot-threshold
