@@ -235,13 +235,12 @@
 				(match :grid "Discussion"
 					(match :service "gu_httprequests_application_time-DiscussionApi"
 						(with {:event "ResponseTime" :group "Web"}
-							log-info
 							(moving-time-window 300
 								(combine riemann.folds/mean
-									log-info
 									(adjust set-resource-from-cluster
+										log-info
 										(splitp < metric
-											50 (minor "Discussion API cluster response time is slow" dedup-2-alert)
+											25 (minor "Discussion API cluster response time is slow" dedup-2-alert)
 											(normal "Discussion API cluster response time is OK" dedup-2-alert))))))))
 
 			content-api-request-rate
