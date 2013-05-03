@@ -241,7 +241,7 @@
 				(where* (fn [e] (and (= (:grid e) "EC2")
 									(= (:environment e) "PROD")
 									(= (:cluster e) "contentapimq_eu-west-1")
-									(= (:service e) "gu_httprequests_application_rate")))
+									(= (:service e) "gu_httprequests_application_rate-Content-API")))
 					(with {:event "MQRequestRate" :group "Application"}
 						log-info
 						(fixed-time-window 15
@@ -270,7 +270,6 @@
 			r2frontend-db-response-time
 			discussionapi-http-response-time
 			content-api-request-rate)))
-
 
 	; TODO - check this - the alerta check seems non-sensical as it uses a static value	
 	; (streams
