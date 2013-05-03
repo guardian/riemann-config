@@ -79,6 +79,8 @@
 	(let [detector (by [:host :service] (runs samples :state (apply changed :state {:init "normal"} children)))]
 		(fn [e] (detector e))))
 
+(defn set-resource-from-cluster [e] (assoc e :resource (:cluster e)))
+
 ; thresholding
 (let [index (default :ttl 900 (update-index (index)))
 		dedup-alert (edge-detection 1 log-info alerta)
@@ -216,8 +218,8 @@
 						(by [:cluster]
 							(with {:event "ResponseTime" :group "Web"}
 								(moving-time-window 30
-									(smap (fn [events] (riemann.folds/mean events))
-										(adjust (fn [e] (assoc e :resource (:cluster e)))
+									(combine riemann.folds/mean
+										(adjust set-resource-from-cluster
 											(splitp < metric
 												400 (minor "R2 response time for cluster is slow" dedup-4-alert)
 												(normal "R2 response time for cluster is OK" dedup-4-alert)))))))))
@@ -233,9 +235,12 @@
 				(match :grid "Discussion"
 					(match :service "gu_httprequests_application_time-DiscussionApi"
 						(with {:event "ResponseTime" :group "Web"}
-							(splitp < metric
-								50 (minor "Discussion API response time is slow" dedup-2-alert)
-								(normal "Discussion API response time is OK" dedup-2-alert)))))
+							(moving-time-window 300
+								(combine riemann.folds/mean
+									(adjust set-resource-from-cluster
+										(splitp < metric
+											50 (minor "Discussion API cluster response time is slow" dedup-2-alert)
+											(normal "Discussion API cluster response time is OK" dedup-2-alert))))))))
 
 			content-api-request-rate
 				(where* (fn [e] (and (= (:grid e) "EC2")
