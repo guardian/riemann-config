@@ -33,7 +33,7 @@
 
 (def graph
 	(if (resolve 'local-testing)
-		prn
+		log-info
 		(graphite {
 		:host hostname
 		:path (fn [e] (str "riemann." (riemann.graphite/graphite-path-basic e)))
@@ -210,6 +210,18 @@
 								500 (minor "R2 response time is slow" dedup-4-alert)
 								(normal "R2 response time is OK" dedup-4-alert)))))
 
+			r2frontend-http-cluster-response-time
+				(match :service "gu_requests_timing_time-r2frontend"
+					(match :host #"respub"
+						(by [:cluster]
+							(with {:event "ResponseTime" :group "Web"}
+								(moving-time-window 30
+									(smap (fn [events] (riemann.folds/mean events)) 
+										(adjust (fn [e] (assoc e :resource (:cluster e)))
+											(splitp < metric
+												400 (minor "R2 response time for cluster is slow" dedup-4-alert)
+												(normal "R2 response time for cluster is OK" dedup-4-alert)))))))))
+
 			r2frontend-db-response-time
 				(match :service "gu_database_calls_time-r2frontend"
 					(with {:event "DbResponseTime" :group "Database"}
@@ -235,13 +247,12 @@
 			fs-util
 			inode-util
 			swap-util
-			; TODO - LoadHigh - references two metrics (one static, so look up from index??)
 			cpu-load-five
 			; TODO - SnapmirrorSync - ask nick what this is doing - seems to be comparing same metric to self
 			volume-util
 			; TODO - R2CurrentMode - string based metric
 			r2frontend-http-response-time
-			; TODO - ResponseTime - for cluster
+			r2frontend-http-cluster-response-time
 			r2frontend-db-response-time
 			discussionapi-http-response-time)))
 
