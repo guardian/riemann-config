@@ -243,8 +243,9 @@
 									(= (:cluster e) "contentapimq_eu-west-1")
 									(= (:service e) "gu_httprequests_application_rate")))
 					(with {:event "MQRequestRate" :group "Application"}
+						log-info
 						(fixed-time-window 15
-							(combine (fn [events] (riemann.folds/sum events))
+							(combine riemann.folds/sum
 								log-info
 								(splitp < metric
 									200 (normal "Content API MQ total request rate is OK" dedup-2-alert)
