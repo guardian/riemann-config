@@ -216,7 +216,7 @@
 						(by [:cluster]
 							(with {:event "ResponseTime" :group "Web"}
 								(moving-time-window 30
-									(smap (fn [events] (riemann.folds/mean events)) 
+									(smap (fn [events] (riemann.folds/mean events))
 										(adjust (fn [e] (assoc e :resource (:cluster e)))
 											(splitp < metric
 												400 (minor "R2 response time for cluster is slow" dedup-4-alert)
@@ -235,7 +235,20 @@
 						(with {:event "ResponseTime" :group "Web"}
 							(splitp < metric
 								50 (minor "Discussion API response time is slow" dedup-2-alert)
-								(normal "Discussion API response time is OK" dedup-2-alert)))))]
+								(normal "Discussion API response time is OK" dedup-2-alert)))))
+
+			content-api-request-rate
+				(where* (fn [e] (and (= (:grid e) "EC2")
+									(= (:environment e) "PROD")
+									(= (:cluster e) "contentapimq_eu-west-1")
+									(= (:service e) "gu_httprequests_application_rate")))
+					(with {:event "MQRequestRate" :group "Application"}
+						(fixed-time-window 15
+							(combine (fn [events] (riemann.folds/sum events))
+								log-info
+								(splitp < metric
+									50 (normal "Content API MQ total request rate is OK" dedup-2-alert)
+									(major "Content API MQ total request rate is low" dedup-2-alert))))))]
 
 		(where (not (state "expired"))
 			boot-threshold
@@ -254,7 +267,8 @@
 			r2frontend-http-response-time
 			r2frontend-http-cluster-response-time
 			r2frontend-db-response-time
-			discussionapi-http-response-time)))
+			discussionapi-http-response-time
+			content-api-request-rate)))
 
 
 	; TODO - check this - the alerta check seems non-sensical as it uses a static value	
@@ -264,17 +278,6 @@
 	; 			(splitp < metric
 	; 				0 (major "There are status code 499 client errors")
 	; 				(normal "No status code 499 client errors")))))
-
-	; TODO - this needs to be a cluster calculation - maybe a moving window???
-	; (streams
-	; 	(match :grid "EC2"
-	; 		(match :environment "PROD"
-	; 			(match :cluster "contentapimq_eu-west-1"
-	; 				(match :service "gu_httprequests_application_time-DiscussionApi"
-	; 					(with {:event "MQRequestRate" :group "Application"}
-	; 						(splitp < metric
-	; 							50 (normal "Content API MQ total request rate is OK")
-	; 							(major "Content API MQ total request rate is low"))))))))
 
 	(streams
 		(with {:metric 1 :host hostname :state "normal" :service "riemann events_sec"}
