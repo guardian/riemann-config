@@ -215,7 +215,7 @@
 			r2frontend-http-cluster-response-time
 				(match :service "gu_requests_timing_time-r2frontend"
 					(match :host #"respub"
-						(by [:cluster]
+						(by :cluster
 							(with {:event "ResponseTime" :group "Web"}
 								(moving-time-window 30
 									(combine riemann.folds/mean
@@ -235,13 +235,14 @@
 				(match :grid "Discussion"
 					(match :service "gu_httprequests_application_time-DiscussionApi"
 						(with {:event "ResponseTime" :group "Web"}
-							(moving-time-window 300
-								(combine riemann.folds/mean
-									(adjust set-resource-from-cluster
-										log-info
-										(splitp < metric
-											25 (minor "Discussion API cluster response time is slow" dedup-2-alert)
-											(normal "Discussion API cluster response time is OK" dedup-2-alert))))))))
+							(by :cluster
+								(moving-time-window 300
+									(combine riemann.folds/mean
+										(adjust set-resource-from-cluster
+											log-info
+											(splitp < metric
+												25 (minor "Discussion API cluster response time is slow" dedup-2-alert)
+												(normal "Discussion API cluster response time is OK" dedup-2-alert)))))))))
 
 			content-api-request-rate
 				(where* (fn [e] (and (= (:grid e) "EC2")
@@ -249,12 +250,13 @@
 									(= (:cluster e) "contentapimq_eu-west-1")
 									(= (:service e) "gu_httprequests_application_rate-Content-API")))
 					(with {:event "MQRequestRate" :group "Application"}
-						(fixed-time-window 15
-							(combine riemann.folds/sum
-								(adjust set-resource-from-cluster
-									(splitp < metric
-										200 (normal "Content API MQ total request rate is OK" dedup-2-alert)
-										(major "Content API MQ total request rate is low" dedup-2-alert)))))))]
+						(by :cluster
+							(fixed-time-window 15
+								(combine riemann.folds/sum
+									(adjust set-resource-from-cluster
+										(splitp < metric
+											200 (normal "Content API MQ total request rate is OK" dedup-2-alert)
+											(major "Content API MQ total request rate is low" dedup-2-alert))))))))]
 
 		(where (not (state "expired"))
 			boot-threshold
