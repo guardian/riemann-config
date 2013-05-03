@@ -305,7 +305,7 @@
 														:group "Frontend"
 														:event "JsErrorRate"}]
 										(do
-											(info
+											(debug
 												(format "%s: Events seen %d; ratio %f; status %s"
 													environment
 													(count events)
