@@ -76,7 +76,7 @@
 
 (defn edge-detection
 	[samples & children]
-	(let [detector (by [:host :service] (runs samples :state (apply changed :state {:init "normal"} children)))]
+	(let [detector (by [:host :service] (runs samples :state (apply changed :state children)))]
 		(fn [e] (detector e))))
 
 (defn set-resource-from-cluster [e] (assoc e :resource (:cluster e)))
