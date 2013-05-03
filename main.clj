@@ -239,9 +239,8 @@
 								(moving-time-window 300
 									(combine riemann.folds/mean
 										(adjust set-resource-from-cluster
-											log-info
 											(splitp < metric
-												25 (minor "Discussion API cluster response time is slow" dedup-2-alert)
+												100 (minor "Discussion API cluster response time is slow" dedup-2-alert)
 												(normal "Discussion API cluster response time is OK" dedup-2-alert)))))))))
 
 			content-api-request-rate
