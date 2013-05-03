@@ -247,7 +247,7 @@
 							(combine (fn [events] (riemann.folds/sum events))
 								log-info
 								(splitp < metric
-									50 (normal "Content API MQ total request rate is OK" dedup-2-alert)
+									200 (normal "Content API MQ total request rate is OK" dedup-2-alert)
 									(major "Content API MQ total request rate is low" dedup-2-alert))))))]
 
 		(where (not (state "expired"))
