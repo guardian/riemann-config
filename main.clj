@@ -247,30 +247,32 @@
 				(where* (fn [e] (and (= (:grid e) "EC2")
 									(= (:environment e) "PROD")
 									(= (:service e) "gu_item_http_time-Content-API")))
-					(with {:event "ContentAPIHostItemResponseTime" :group "Application"}
+					(with {:event "ContentAPIHostItemResponseTime" :group "Application" :grid "ContentAPI"}
 						(by :resource
 							(moving-time-window 300
-                (splitp < metric
-                  120 (major "Content API host item response time is slow" dedup-alert)
-                  (normal "Content API host item response time is OK" dedup-alert))))))
+								(combine riemann.folds/mean
+									(splitp < metric
+										120 (major "Content API host item response time is slow" dedup-alert)
+										(normal "Content API host item response time is OK" dedup-alert)))))))
 
 			content-api-host-search-request-time
 				(where* (fn [e] (and (= (:grid e) "EC2")
 									(= (:environment e) "PROD")
 									(= (:service e) "gu_search_http_time-Content-API")))
-					(with {:event "ContentAPIHostSearchResponseTime" :group "Application"}
+					(with {:event "ContentAPIHostSearchResponseTime" :group "Application" :grid "ContentAPI"}
 						(by :resource
 							(moving-time-window 300
-                (splitp < metric
-                  60 (major "Content API host search response time is slow" dedup-alert)
-                  (normal "Content API host search response time is OK" dedup-alert))))))
+								(combine riemann.folds/mean
+									(splitp < metric
+										60 (major "Content API host search response time is slow" dedup-alert)
+										(normal "Content API host search response time is OK" dedup-alert)))))))
 
 			content-api-request-time
 				(where* (fn [e] (and (= (:grid e) "EC2")
 									(= (:environment e) "PROD")
 									(= (:cluster e) "contentapimq_eu-west-1")
 									(= (:service e) "gu_httprequests_application_time-Content-API")))
-					(with {:event "ContentAPIResponseTime" :group "Application"}
+					(with {:event "ContentAPIResponseTime" :group "Application" :grid "ContentAPI"}
 						(by :cluster
 							(moving-time-window 30
 								(combine riemann.folds/mean
@@ -284,7 +286,7 @@
 									(= (:environment e) "PROD")
 									(= (:cluster e) "contentapimq_eu-west-1")
 									(= (:service e) "gu_httprequests_application_rate-Content-API")))
-					(with {:event "MQRequestRate" :group "Application"}
+					(with {:event "MQRequestRate" :group "Application" :grid "ContentAPI"}
 						(by :cluster
 							(fixed-time-window 15
 								(combine riemann.folds/sum
