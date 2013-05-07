@@ -243,18 +243,56 @@
 												100 (minor "Discussion API cluster response time is slow" dedup-2-alert)
 												(normal "Discussion API cluster response time is OK" dedup-2-alert)))))))))
 
+			content-api-host-item-request-time
+				(where* (fn [e] (and (= (:grid e) "EC2")
+									(= (:environment e) "PROD")
+									(= (:service e) "gu_item_http_time-Content-API")))
+					(with {:event "ContentAPIHostItemResponseTime" :group "Application" :grid "ContentAPI"}
+						(by :resource
+							(moving-time-window 300
+								(combine riemann.folds/mean
+									(splitp < metric
+										120 (major "Content API host item response time is slow" dedup-alert)
+										(normal "Content API host item response time is OK" dedup-alert)))))))
+
+			content-api-host-search-request-time
+				(where* (fn [e] (and (= (:grid e) "EC2")
+									(= (:environment e) "PROD")
+									(= (:service e) "gu_search_http_time-Content-API")))
+					(with {:event "ContentAPIHostSearchResponseTime" :group "Application" :grid "ContentAPI"}
+						(by :resource
+							(moving-time-window 300
+								(combine riemann.folds/mean
+									(splitp < metric
+										60 (major "Content API host search response time is slow" dedup-alert)
+										(normal "Content API host search response time is OK" dedup-alert)))))))
+
+			content-api-request-time
+				(where* (fn [e] (and (= (:grid e) "EC2")
+									(= (:environment e) "PROD")
+									(= (:cluster e) "contentapimq_eu-west-1")
+									(= (:service e) "gu_httprequests_application_time-Content-API")))
+					(with {:event "ContentAPIResponseTime" :group "Application" :grid "ContentAPI"}
+						(by :cluster
+							(moving-time-window 30
+								(combine riemann.folds/mean
+									(adjust set-resource-from-cluster
+										(splitp < metric
+											100 (major "Content API MQ cluster response time is slow" dedup-2-alert)
+											(normal "Content API MQ cluster response time is OK" dedup-2-alert))))))))
+
 			content-api-request-rate
 				(where* (fn [e] (and (= (:grid e) "EC2")
 									(= (:environment e) "PROD")
 									(= (:cluster e) "contentapimq_eu-west-1")
 									(= (:service e) "gu_httprequests_application_rate-Content-API")))
-					(with {:event "MQRequestRate" :group "Application"}
+					(with {:event "MQRequestRate" :group "Application" :grid "ContentAPI"}
 						(by :cluster
 							(fixed-time-window 15
 								(combine riemann.folds/sum
 									(adjust set-resource-from-cluster
 										(splitp < metric
-											200 (normal "Content API MQ total request rate is OK" dedup-2-alert)
+											100 (normal "Content API MQ total request rate is OK" dedup-2-alert)
 											(major "Content API MQ total request rate is low" dedup-2-alert))))))))]
 
 		(where (not (state "expired"))
@@ -275,6 +313,9 @@
 			r2frontend-http-cluster-response-time
 			r2frontend-db-response-time
 			discussionapi-http-response-time
+			content-api-host-item-request-time
+			content-api-host-search-request-time
+			content-api-request-time
 			content-api-request-rate)))
 
 	; TODO - check this - the alerta check seems non-sensical as it uses a static value	
