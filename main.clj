@@ -243,6 +243,20 @@
 												100 (minor "Discussion API cluster response time is slow" dedup-2-alert)
 												(normal "Discussion API cluster response time is OK" dedup-2-alert)))))))))
 
+			content-api-request-time
+				(where* (fn [e] (and (= (:grid e) "EC2")
+									(= (:environment e) "PROD")
+									(= (:cluster e) "contentapimq_eu-west-1")
+									(= (:service e) "gu_httprequests_application_time-Content-API")))
+					(with {:event "ContentAPIResponseTime" :group "Application"}
+						(by :cluster
+							(moving-time-window 30
+								(combine riemann.folds/mean
+									(adjust set-resource-from-cluster
+										(splitp < metric
+											100 (major "Content API MQ cluster response time is slow" dedup-2-alert)
+											(normal "Content API MQ cluster response time is OK" dedup-2-alert))))))))
+
 			content-api-request-rate
 				(where* (fn [e] (and (= (:grid e) "EC2")
 									(= (:environment e) "PROD")
