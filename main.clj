@@ -313,6 +313,9 @@
 			r2frontend-http-cluster-response-time
 			r2frontend-db-response-time
 			discussionapi-http-response-time
+			content-api-host-item-request-time
+			content-api-host-search-request-time
+			content-api-request-time
 			content-api-request-rate)))
 
 	; TODO - check this - the alerta check seems non-sensical as it uses a static value	
