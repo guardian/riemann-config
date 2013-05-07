@@ -254,7 +254,7 @@
 								(combine riemann.folds/sum
 									(adjust set-resource-from-cluster
 										(splitp < metric
-											200 (normal "Content API MQ total request rate is OK" dedup-2-alert)
+											100 (normal "Content API MQ total request rate is OK" dedup-2-alert)
 											(major "Content API MQ total request rate is low" dedup-2-alert))))))))]
 
 		(where (not (state "expired"))
