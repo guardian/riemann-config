@@ -243,6 +243,28 @@
 												100 (minor "Discussion API cluster response time is slow" dedup-2-alert)
 												(normal "Discussion API cluster response time is OK" dedup-2-alert)))))))))
 
+			content-api-host-item-request-time
+				(where* (fn [e] (and (= (:grid e) "EC2")
+									(= (:environment e) "PROD")
+									(= (:service e) "gu_item_http_time-Content-API")))
+					(with {:event "ContentAPIHostItemResponseTime" :group "Application"}
+						(by :resource
+							(moving-time-window 300
+                (splitp < metric
+                  120 (major "Content API host item response time is slow" dedup-alert)
+                  (normal "Content API host item response time is OK" dedup-alert))))))
+
+			content-api-host-search-request-time
+				(where* (fn [e] (and (= (:grid e) "EC2")
+									(= (:environment e) "PROD")
+									(= (:service e) "gu_search_http_time-Content-API")))
+					(with {:event "ContentAPIHostSearchResponseTime" :group "Application"}
+						(by :resource
+							(moving-time-window 300
+                (splitp < metric
+                  60 (major "Content API host search response time is slow" dedup-alert)
+                  (normal "Content API host search response time is OK" dedup-alert))))))
+
 			content-api-request-time
 				(where* (fn [e] (and (= (:grid e) "EC2")
 									(= (:environment e) "PROD")
