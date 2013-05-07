@@ -252,7 +252,7 @@
 							(moving-time-window 300
 								(combine riemann.folds/mean
 									(splitp < metric
-										120 (major "Content API host item response time is slow" dedup-alert)
+										150 (major "Content API host item response time is slow" dedup-alert)
 										(normal "Content API host item response time is OK" dedup-alert)))))))
 
 			content-api-host-search-request-time
@@ -264,7 +264,7 @@
 							(moving-time-window 300
 								(combine riemann.folds/mean
 									(splitp < metric
-										60 (major "Content API host search response time is slow" dedup-alert)
+										100 (major "Content API host search response time is slow" dedup-alert)
 										(normal "Content API host search response time is OK" dedup-alert)))))))
 
 			content-api-request-time
@@ -278,7 +278,7 @@
 								(combine riemann.folds/mean
 									(adjust set-resource-from-cluster
 										(splitp < metric
-											100 (major "Content API MQ cluster response time is slow" dedup-2-alert)
+											130 (major "Content API MQ cluster response time is slow" dedup-2-alert)
 											(normal "Content API MQ cluster response time is OK" dedup-2-alert))))))))
 
 			content-api-request-rate
