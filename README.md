@@ -24,6 +24,9 @@ you need then please come and talk to us.
 Either way, once you are done, submit a pull request to the master branch. Once
 merged in it will get deployed to the monitoring servers.
 
+You'll probably want to read the [riemann primer](http://riemann.io/howto.html)
+and work with the [riemann API docs](http://riemann.io/api.html) open (most of
+the interesting functions are under `streams`).
 
 Testing changes
 ---------------
