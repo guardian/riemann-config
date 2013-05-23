@@ -247,7 +247,7 @@
 				(where* (fn [e] (and (= (:grid e) "EC2")
 									(= (:environment e) "PROD")
 									(= (:service e) "gu_item_http_time-Content-API")))
-					(with {:event "ContentAPIHostItemResponseTime" :group "Application" :grid "ContentAPI"}
+					(with {:event "HostItemResponseTime" :group "Application" :grid "ContentAPI"}
 						(by :resource
 							(moving-time-window 300
 								(combine riemann.folds/mean
@@ -259,7 +259,7 @@
 				(where* (fn [e] (and (= (:grid e) "EC2")
 									(= (:environment e) "PROD")
 									(= (:service e) "gu_search_http_time-Content-API")))
-					(with {:event "ContentAPIHostSearchResponseTime" :group "Application" :grid "ContentAPI"}
+					(with {:event "HostSearchResponseTime" :group "Application" :grid "ContentAPI"}
 						(by :resource
 							(moving-time-window 300
 								(combine riemann.folds/mean
@@ -272,7 +272,7 @@
 									(= (:environment e) "PROD")
 									(= (:cluster e) "contentapimq_eu-west-1")
 									(= (:service e) "gu_httprequests_application_time-Content-API")))
-					(with {:event "ContentAPIResponseTime" :group "Application" :grid "ContentAPI"}
+					(with {:event "ResponseTime" :group "Application" :grid "ContentAPI"}
 						(by :cluster
 							(moving-time-window 30
 								(combine riemann.folds/mean
