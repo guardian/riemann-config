@@ -345,11 +345,13 @@
 								(if (and total-success total-error)
 									(let [ratio (double (/ (:metric total-error) (:metric total-success)))
 										  environment (:environment total-success)
+										  grid (:grid total-success)
 											new-event {	:host "riemann"
 														:service "frontend_js_error_ratio"
 														:metric ratio
 														:environment environment
 														:group "Frontend"
+														:resource grid
 														:event "JsErrorRate"}]
 										(do
 											(debug
