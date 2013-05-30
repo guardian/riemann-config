@@ -27,6 +27,7 @@
                 {:host host
                  :service metric
                  :environment env
+                 :instance instance
                  :resource (if (nil? instance) host (str host ":" instance))
                  :grid grid
                  :cluster cluster
@@ -77,7 +78,7 @@
 
 (defn edge-detection
 	[samples & children]
-	(let [detector (by [:host :service] (runs samples :state (apply changed :state children)))]
+	(let [detector (by [:host :service :instance] (runs samples :state (apply changed :state children)))]
 		(fn [e] (detector e))))
 
 (defn set-resource-from-cluster [e] (assoc e :resource (:cluster e)))
