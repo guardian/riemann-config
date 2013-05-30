@@ -31,6 +31,10 @@
                  }))
 )
 
+(defn log-info
+	[e]
+	(info e))
+
 (def graph
 	(if (resolve 'local-testing)
 		log-info
@@ -57,10 +61,6 @@
 			(let [metricevent (.lookup (:index @core) (:host e) metricname)]
 				(if-let [metricvalue (:metric metricevent)]
 					(call-rescue (assoc e metricsymbol metricvalue) children))))))
-
-(defn log-info
-	[e]
-	(info e))
 
 ; set of severity functions
 (defn severity
