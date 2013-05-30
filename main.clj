@@ -22,14 +22,15 @@
 :parser-fn (fn [{:keys [service] :as event}]
               (if-let [[env grid cluster host metric]
                        (clojure.string/split service #"\.")]
+              (if-let [[metric instance]
+                       (clojure.string/split metric #"-" 2)]
                 {:host host
                  :service metric
                  :environment env
-                 :resource host
+                 :resource (if (nil? instance) host (str host ":" instance))
                  :grid grid
                  :cluster cluster
-                 }))
-)
+                 }))))
 
 (defn log-info
 	[e]
@@ -166,7 +167,7 @@
 									(normal "Guardian management status metrics are OK" dedup-alert))))))
 
 			fs-util
-				(match :service #"^fs_util-"
+				(match :service "fs_util"
 					(with {:event "FsUtil" :group "OS"}
 						(splitp < metric
 							95 (critical "File system utilisation is very high" dedup-alert)
@@ -174,7 +175,7 @@
 							(normal "File system utilisation is OK" dedup-alert))))
 
 			inode-util
-				(match :service #"^inode_util-"
+				(match :service "inode_util"
 					(with {:event "InodeUtil" :group "OS"}
 						(splitp < metric
 							95 (critical "File system inode utilisation is very high" dedup-alert)
