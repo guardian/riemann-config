@@ -192,11 +192,12 @@
 			cpu-load-five
 				(by [:host]
 					(match :service "load_five"
-						(lookup-metric "cpu_num"
-							(split*
-								(fn [e] (< (* 6 (:cpu_num e)) (:metric e))) (critical "System 5-minute load average is very high" dedup-alert)
-								(fn [e] (< (* 4 (:cpu_num e)) (:metric e))) (major "System 5-minute load average is high" dedup-alert)
-								(normal "System 5-minute load average is OK" dedup-alert)))))
+						(with :event "SystemLoad"
+							(lookup-metric "cpu_num"
+								(split*
+									(fn [e] (< (* 6 (:cpu_num e)) (:metric e))) (critical "System 5-minute load average is very high" dedup-alert)
+									(fn [e] (< (* 4 (:cpu_num e)) (:metric e))) (major "System 5-minute load average is high" dedup-alert)
+									(normal "System 5-minute load average is OK" dedup-alert))))))
 
 			volume-util
 				(match :service "df_percent-kb-capacity" ; TODO - in alerta config the split is disjoint
