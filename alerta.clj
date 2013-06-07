@@ -25,7 +25,11 @@
   [event]
   {
    :origin (str "riemann/" hostname)
-   :resource (get event :resource (:host event))
+   :resource
+    (if (.contains (:service event) "-")
+      (let [[_ instance] (clojure.string/split (:service event) #"-" 2)]
+        (str (:host event) ":" instance))
+        (:host event))
    :event (get event :event (:service event))
    :group (get event :group "Performance")
    :value (:metric event)
