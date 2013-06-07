@@ -38,6 +38,7 @@
    :service [(get event :grid "Common")]
    :tags (:tags event)
    :text (:description event)
+   :moreInfo (str "ssh -A " (clojure.string/replace (:ip event) #"\." "-") "." (:domain event))
    :rawData event})
 
 (defn alerta
