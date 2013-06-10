@@ -93,6 +93,9 @@
 
 	(streams
 		(expired
+			(match :service "heartbeat"
+				(with {:event "GangliaHeartbeat" :group "Ganglia"}
+					(major "No heartbeat from Ganglia agent within last 20 seconds" dedup-alert)))
 			log-info))
 
 	(streams
@@ -134,14 +137,12 @@
 
 			heartbeat
 				(match :service "heartbeat"
-					(with {:event "GangliaHeartbeat" :group "Ganglia" :count 2}
+					(with {:event "GangliaHeartbeat" :group "Ganglia"}
 						(let [last-hb-threshold (- (now) 90)]
-							(splitp > metric
+							(splitp < metric
 								last-hb-threshold
 									(switch-epoch-to-elapsed
-										(critical "No heartbeat from Ganglia agent for at least 90 seconds" dedup-alert))
-								(switch-epoch-to-elapsed
-									(normal "Heartbeat from Ganglia agent is OK" dedup-alert))))))
+										(normal "Heartbeat from Ganglia agent is OK" dedup-alert))))))
 
 			puppet-last-run
 				(match :service "pup_last_run"
