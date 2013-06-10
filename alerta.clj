@@ -41,7 +41,7 @@
    :severity (:state event)
    :environment [(get event :environment "INFRA")]
    :service [(get event :grid "Common")]
-   :tags (conj (get event :tags []) (:cluster event))
+   :tags (:tags event)
    :text (:description event)
    :moreInfo
     (if-let [ip (:ip event)]
