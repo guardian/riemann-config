@@ -46,7 +46,7 @@
 		})))
 
 ; reap expired events every 10 seconds
-(periodically-expire 10 {:keep-keys [:host :service :environment :grid :cluster :ip :tags :index-time]})
+(periodically-expire 10 {:keep-keys [:host :service :environment :grid :cluster :ip :tags :metric :index-time]})
 
 ; some helpful functions
 (defn now []
@@ -95,9 +95,9 @@
 		(expired
 			(match :service "heartbeat"
 				(fn [event]
-					(let [index-time (:index-time event)]
-						((with {:event "GangliaHeartbeat" :group "Ganglia" :metric index-time}
-								(major "No heartbeat received from Ganglia agent within last 20 seconds" dedup-alert)) event)))
+					(let [metric (:metric event)]
+						((with {:event "GangliaHeartbeat" :group "Ganglia" :metric metric}
+								(major "No heartbeat from Ganglia agent" dedup-alert)) event)))
 			log-info)))
 
 	(streams
@@ -141,8 +141,10 @@
 				(match :service "heartbeat"
 					(with {:event "GangliaHeartbeat" :group "Ganglia"}
 						(let [last-hb-threshold (- (now) 90)]
-							(splitp < metric
+							(splitp > metric
 								last-hb-threshold
+									(switch-epoch-to-elapsed
+										(major "Heartbeat from Ganglia agent is stale" dedup-alert))
 									(switch-epoch-to-elapsed
 										(normal "Heartbeat from Ganglia agent is OK" dedup-alert))))))
 
