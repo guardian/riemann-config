@@ -137,6 +137,13 @@
 						(with {:event "SystemStart" :group "System"} 
 							(informational "System started less than 2 hours ago" dedup-alert))))
 
+			disk-max-util
+				(match :service "part_max_used"
+					(with {:event "DiskMaxUtil" :group "Performance"}
+						(splitp < metric
+							90 (warning "Disk utilisation for highest filesystem over threshold" dedup-alert)
+							(normal "Disk utilisation for highest filesystem is under threshold" dedup-alert))))
+
 			heartbeat
 				(match :service "heartbeat"
 					(with {:event "GangliaHeartbeat" :group "Ganglia"}
@@ -310,6 +317,7 @@
 		(where (not (state "expired"))
 			boot-threshold
 			heartbeat
+			disk-max-util
 			puppet-last-run
 			puppet-resource-failed
 			; TODO - GangliaTCPStatus - string based metric
