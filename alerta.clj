@@ -33,8 +33,8 @@
    :resource
     (if (.contains (:service event) "-")
       (let [[_ instance] (clojure.string/split (:service event) #"-" 2)]
-        (str (:host event) ":" instance))
-        (:host event))
+        (str (:resource event) ":" instance))
+        (:resource event))
    :event (get event :event (:service event))
    :group (get event :group "Performance")
    :value (:metric event)
