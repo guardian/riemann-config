@@ -25,7 +25,7 @@
                 {:host host
                  :service metric
                  :environment env
-                 :resource (if (nil? instance) host (str host ":" instance))
+                 :resource host
                  :grid grid
                  :cluster cluster
                  })))
