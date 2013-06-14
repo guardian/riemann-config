@@ -159,7 +159,7 @@
 							(splitp > metric
 								last-run-threshold
 									(switch-epoch-to-elapsed
-										(major "Puppet agent has not run for at least 2 hours" dedup-alert))
+										(minor "Puppet agent has not run for at least 2 hours" dedup-alert))
 								(switch-epoch-to-elapsed
 									(normal "Puppet agent is OK" dedup-alert))))))
 			puppet-resource-failed
