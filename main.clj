@@ -212,6 +212,14 @@
 									(fn [e] (< (* 4 (:cpu_num e)) (:metric e))) (minor "System 5-minute load average is high" dedup-alert)
 									(normal "System 5-minute load average is OK" dedup-alert))))))
 
+			disk-io-util
+				(match :service #"^diskio_util-"
+					(with {:event "DiskIOUtil" :group "OS"}
+						(splitp < metric
+							95 (major "Disk IO utilisation is very high" dedup-alert)
+							90 (minor "Disk IO utilisation is high" dedup-alert)
+							(normal "Disk IO utilisation is OK" dedup-alert))))
+
 			volume-util
 				(match :service "df_percent-kb-capacity" ; TODO - in alerta config the split is disjoint
 					(with {:event "VolumeUsage" :group "NetApp"}
@@ -322,6 +330,7 @@
 			inode-util
 			swap-util
 			cpu-load-five
+			disk-io-util
 			; TODO - SnapmirrorSync - ask nick what this is doing - seems to be comparing same metric to self
 			volume-util
 			; TODO - R2CurrentMode - string based metric
