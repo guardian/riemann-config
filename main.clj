@@ -136,7 +136,7 @@
 
 			disk-max-util
 				(match :service "part_max_used"
-					(with {:event "DiskMaxUtil" :group "Performance"}
+					(with {:event "DiskMaxUtil" :group "OS"}
 						(splitp < metric
 							90 (warning "Disk utilisation for highest filesystem over threshold" dedup-alert)
 							(normal "Disk utilisation for highest filesystem is under threshold" dedup-alert))))
@@ -184,16 +184,16 @@
 				(match :service #"^fs_util-"
 					(with {:event "FsUtil" :group "OS"}
 						(splitp < metric
-							95 (critical "File system utilisation is very high" dedup-alert)
-							90 (major "File system utilisation is high" dedup-alert)
+							95 (major "File system utilisation is very high" dedup-alert)
+							90 (minor "File system utilisation is high" dedup-alert)
 							(normal "File system utilisation is OK" dedup-alert))))
 
 			inode-util
 				(match :service #"^inode_util-"
 					(with {:event "InodeUtil" :group "OS"}
 						(splitp < metric
-							95 (critical "File system inode utilisation is very high" dedup-alert)
-							90 (major "File system inode utilisation is high" dedup-alert)
+							95 (major "File system inode utilisation is very high" dedup-alert)
+							90 (minor "File system inode utilisation is high" dedup-alert)
 							(normal "File system inode utilisation is OK" dedup-alert))))
 			swap-util
 				(match :service "swap_util"
@@ -205,16 +205,16 @@
 			cpu-load-five
 				(by [:host]
 					(match :service "load_five"
-						(with :event "SystemLoad"
+						(with {:event "SystemLoad" :group "OS"}
 							(lookup-metric "cpu_num"
 								(split*
-									(fn [e] (< (* 6 (:cpu_num e)) (:metric e))) (critical "System 5-minute load average is very high" dedup-alert)
-									(fn [e] (< (* 4 (:cpu_num e)) (:metric e))) (major "System 5-minute load average is high" dedup-alert)
+									(fn [e] (< (* 6 (:cpu_num e)) (:metric e))) (major "System 5-minute load average is very high" dedup-alert)
+									(fn [e] (< (* 4 (:cpu_num e)) (:metric e))) (minor "System 5-minute load average is high" dedup-alert)
 									(normal "System 5-minute load average is OK" dedup-alert))))))
 
 			volume-util
 				(match :service "df_percent-kb-capacity" ; TODO - in alerta config the split is disjoint
-					(with {:event "VolumeUsage" :group "netapp"}
+					(with {:event "VolumeUsage" :group "NetApp"}
 						(splitp < metric
 							90 (critical "Volume utilisation is very high" dedup-alert)
 							85 (major "Volume utilisation is high" dedup-alert)
@@ -317,7 +317,6 @@
 			disk-max-util
 			puppet-last-run
 			puppet-resource-failed
-			; TODO - GangliaTCPStatus - string based metric
 			last-gumetric-collection
 			fs-util
 			inode-util
