@@ -264,7 +264,7 @@
 									(combine riemann.folds/mean
 										(adjust set-resource-from-cluster
 											(splitp < metric
-												100 (minor "Discussion API cluster response time is slow" dedup-2-alert)
+												100 (warning "Discussion API cluster response time is slow" dedup-2-alert)
 												(normal "Discussion API cluster response time is OK" dedup-2-alert)))))))))
 
 			content-api-host-item-request-time
