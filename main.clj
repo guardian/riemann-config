@@ -134,13 +134,6 @@
 						(with {:event "SystemStart" :group "System"} 
 							(informational "System started less than 2 hours ago" dedup-alert))))
 
-			disk-max-util
-				(match :service "part_max_used"
-					(with {:event "DiskMaxUtil" :group "OS"}
-						(splitp < metric
-							90 (warning "Disk utilisation for highest filesystem over threshold" dedup-alert)
-							(normal "Disk utilisation for highest filesystem is under threshold" dedup-alert))))
-
 			heartbeat
 				(match :service "heartbeat"
 					(with {:event "GangliaHeartbeat" :group "Ganglia"}
@@ -179,6 +172,13 @@
 										(minor "Guardian management status metrics have not been updated for more than 5 minutes" dedup-alert))
 								(switch-epoch-to-elapsed
 									(normal "Guardian management status metrics are OK" dedup-alert))))))
+
+			disk-max-util
+				(match :service "part_max_used"
+					(with {:event "DiskMaxUtil" :group "OS"}
+						(splitp < metric
+							90 (warning "Disk utilisation for highest filesystem over threshold" dedup-alert)
+							(normal "Disk utilisation for highest filesystem is under threshold" dedup-alert))))
 
 			fs-util
 				(match :service #"^fs_util-"
@@ -219,53 +219,6 @@
 							95 (major "Disk IO utilisation is very high" dedup-alert)
 							90 (minor "Disk IO utilisation is high" dedup-alert)
 							(normal "Disk IO utilisation is OK" dedup-alert))))
-
-			volume-util
-				(match :service "df_percent-kb-capacity" ; TODO - in alerta config the split is disjoint
-					(with {:event "VolumeUsage" :group "NetApp"}
-						(splitp < metric
-							90 (critical "Volume utilisation is very high" dedup-alert)
-							85 (major "Volume utilisation is high" dedup-alert)
-							(normal "Volume utilisation is OK" dedup-alert))))
-
-			r2frontend-http-response-time
-				(match :service "gu_requests_timing_time-r2frontend"
-					(match :host #"respub"
-						(with {:event "ResponseTime" :group "Web"}
-							(splitp < metric
-								500 (minor "R2 response time is slow" dedup-4-alert)
-								(normal "R2 response time is OK" dedup-4-alert)))))
-
-			r2frontend-http-cluster-response-time
-				(match :service "gu_requests_timing_time-r2frontend"
-					(match :host #"respub"
-						(by :cluster
-							(with {:event "ResponseTime" :group "Web"}
-								(moving-time-window 30
-									(combine riemann.folds/mean
-										(adjust set-resource-from-cluster
-											(splitp < metric
-												400 (minor "R2 response time for cluster is slow" dedup-4-alert)
-												(normal "R2 response time for cluster is OK" dedup-4-alert)))))))))
-
-			r2frontend-db-response-time
-				(match :service "gu_database_calls_time-r2frontend"
-					(with {:event "DbResponseTime" :group "Database"}
-						(splitp < metric
-							30 (minor "R2 database response time is slow" dedup-2-alert)
-							(normal "R2 database response time is OK" dedup-2-alert))))
-
-			discussionapi-http-response-time
-				(match :grid "Discussion"
-					(match :service "gu_httprequests_application_time-DiscussionApi"
-						(with {:event "ResponseTime" :group "Web"}
-							(by :cluster
-								(moving-time-window 300
-									(combine riemann.folds/mean
-										(adjust set-resource-from-cluster
-											(splitp < metric
-												100 (warning "Discussion API cluster response time is slow" dedup-2-alert)
-												(normal "Discussion API cluster response time is OK" dedup-2-alert)))))))))
 
 			content-api-host-item-request-time
 				(where* (fn [e] (and (= (:grid e) "EC2")
@@ -331,13 +284,6 @@
 			swap-util
 			cpu-load-five
 			disk-io-util
-			; TODO - SnapmirrorSync - ask nick what this is doing - seems to be comparing same metric to self
-			volume-util
-			; TODO - R2CurrentMode - string based metric
-			r2frontend-http-response-time
-			r2frontend-http-cluster-response-time
-			r2frontend-db-response-time
-			discussionapi-http-response-time
 			content-api-host-item-request-time
 			content-api-host-search-request-time
 			content-api-request-time
