@@ -208,8 +208,8 @@
 						(with {:event "SystemLoad" :group "OS"}
 							(lookup-metric "cpu_num"
 								(split*
-									(fn [e] (< (* 6 (:cpu_num e)) (:metric e))) (major "System 5-minute load average is very high" dedup-alert)
-									(fn [e] (< (* 4 (:cpu_num e)) (:metric e))) (minor "System 5-minute load average is high" dedup-alert)
+									(fn [e] (< (* 10 (:cpu_num e)) (:metric e))) (minor "System 5-minute load average is very high" dedup-alert)
+									(fn [e] (< (* 6 (:cpu_num e)) (:metric e))) (warning "System 5-minute load average is high" dedup-alert)
 									(normal "System 5-minute load average is OK" dedup-alert))))))
 
 			disk-io-util
