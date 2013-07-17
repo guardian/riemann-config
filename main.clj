@@ -11,7 +11,7 @@
 ; configure the various servers that we listen on
 (tcp-server :host "0.0.0.0")
 (udp-server :host "0.0.0.0")
-(ws-server)
+(ws-server :host "0.0.0.0")
 (repl-server)
 ; listen on the carbon protocol
 (graphite-server :host "0.0.0.0"
