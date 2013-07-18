@@ -229,7 +229,7 @@
 							(moving-time-window 300
 								(combine riemann.folds/mean
 									(splitp < metric
-										300 (major "Content API host item response time is slow" dedup-alert)
+										300 (minor "Content API host item response time is slow" dedup-alert)
 										(normal "Content API host item response time is OK" dedup-alert)))))))
 
 			content-api-host-search-request-time
@@ -241,7 +241,7 @@
 							(moving-time-window 300
 								(combine riemann.folds/mean
 									(splitp < metric
-										200 (major "Content API host search response time is slow" dedup-alert)
+										200 (minor "Content API host search response time is slow" dedup-alert)
 										(normal "Content API host search response time is OK" dedup-alert)))))))
 
 			content-api-request-time
@@ -255,7 +255,7 @@
 								(combine riemann.folds/mean
 									(adjust set-resource-from-cluster
 										(splitp < metric
-											300 (major "Content API MQ cluster response time is slow" dedup-2-alert)
+											300 (minor "Content API MQ cluster response time is slow" dedup-2-alert)
 											(normal "Content API MQ cluster response time is OK" dedup-2-alert))))))))
 
 			content-api-request-rate
@@ -270,7 +270,7 @@
 									(adjust set-resource-from-cluster
 										(splitp < metric
 											70 (normal "Content API MQ total request rate is OK" dedup-2-alert)
-											(major "Content API MQ total request rate is low" dedup-2-alert))))))))]
+											(minor "Content API MQ total request rate is low" dedup-2-alert))))))))]
 
 		(where (not (state "expired"))
 			boot-threshold
@@ -294,7 +294,7 @@
 	; 	(match :grid "Frontend"
 	; 		(with {:event "NgnixError" :group "Web"}
 	; 			(splitp < metric
-	; 				0 (major "There are status code 499 client errors")
+	; 				0 (minor "There are status code 499 client errors")
 	; 				(normal "No status code 499 client errors")))))
 
 	(streams
@@ -332,5 +332,5 @@
 													ratio
 													(if (> ratio threshold) "bad" "okay")))
 											(if (> ratio threshold)
-												(call-rescue new-event [(major "JS error rate unexpectedly high" dedup-4-alert)])
+												(call-rescue new-event [(minor "JS error rate unexpectedly high" dedup-4-alert)])
 												(call-rescue new-event [(normal "JS error rate within limits" dedup-4-alert)]))))))))))))))
