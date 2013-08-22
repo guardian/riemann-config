@@ -38,7 +38,7 @@
 	(if (resolve 'local-testing)
 		log-info
 		(graphite {
-		:host hostname
+		:host "graphite"
 		:path (fn [e] (str "riemann." (riemann.graphite/graphite-path-basic e)))
 		})))
 
