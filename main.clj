@@ -20,15 +20,16 @@
 ; assume that all incoming carbon metrics have a name in the form
 ; ENV.GRID.CLUSTER.HOSTNAME.SERVICE
 :parser-fn (fn [{:keys [service] :as event}]
-              (if-let [[env grid cluster host metric]
-                       (clojure.string/split service #"\.")]
-                {:host (str env ":" host)
-                 :service metric
-                 :environment env
-                 :resource host
-                 :grid grid
-                 :cluster cluster
-                 })))
+		(if-let [[env grid cluster host metric]
+			(clojure.string/split service #"\.")]
+		{:host (str env ":" host)
+		:service metric
+		:environment env
+		:resource host
+		:grid grid
+		:cluster cluster
+		:tags [(str "cluster:" cluster)]
+		})))
 
 (defn log-info
 	[e]
