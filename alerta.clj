@@ -20,11 +20,6 @@
                 :accept :json
                 :throw-entire-message? true})))
 
-(def gc2 {"dc1" "gc2.dc1.gnm"
-          "dc2" "gc2.dc2.gnm"
-          "dev1" "gc2.dev.dc1.gnm"
-          "dev2" "gc2.dev.dc2.gnm"})
-
 (defn format-alerta-event
   "Formats an event for Alerta."
   [event]
@@ -45,10 +40,7 @@
    :text (:description event)
    :moreInfo
     (if-let [ip (:ip event)]
-      (str "ssh -A "
-        (clojure.string/replace (:ip event) #"\." "-")
-        "."
-        (gc2 (last (clojure.string/split (:cluster event) #"_"))))
+      (str "ssh -A " ip)
       "IP address not available" )
    :rawData event})
 
