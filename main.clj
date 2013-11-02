@@ -13,23 +13,13 @@
 (udp-server :host "0.0.0.0")
 (ws-server :host "0.0.0.0")
 (repl-server)
-; listen on the carbon protocol
-(graphite-server :host "0.0.0.0"
-:port 3003
-:protocol :udp
-; assume that all incoming carbon metrics have a name in the form
-; ENV.GRID.CLUSTER.HOSTNAME.SERVICE
-:parser-fn (fn [{:keys [service] :as event}]
-		(if-let [[env grid cluster host metric]
-			(clojure.string/split service #"\.")]
-		{:host (str env ":" host)
-		:service metric
-		:environment env
-		:resource host
-		:grid grid
-		:cluster cluster
-		:tags [(str "cluster:" cluster)]
-		})))
+
+(defn parse-stream
+	[& children]
+	(fn [e] (let [new-event (assoc e
+		:host (str (:environment e) ":" (:host e))
+		:resource (:host e))]
+			(call-rescue new-event children))))
 
 (defn log-info
 	[e]
@@ -89,14 +79,14 @@
 	(streams
 		(with :index-time (format "%.0f" (now)) index))
 
-	(streams
+	(streams (parse-stream
 		(expired
 			(match :service "heartbeat"
 				(fn [event]
 					(let [metric (:metric event)]
 						((with {:event "GangliaHeartbeat" :group "Ganglia" :metric metric}
 								(major "No heartbeat from Ganglia agent" dedup-alert)) event)))
-			log-info)))
+			log-info))))
 
 	(streams
 		(throttle 1 30 heartbeat))
@@ -125,7 +115,7 @@
 						:time (unix-time)
 						:metric (count @metrics)}))))
 
-	(streams
+	(streams (parse-stream
 		(let [boot-threshold 
 				(match :service "boottime"
 					(where* 
@@ -274,6 +264,7 @@
 											(minor "Content API MQ total request rate is low" dedup-2-alert))))))))]
 
 		(where (not (state "expired"))
+                        ; prn
 			boot-threshold
 			heartbeat
 			disk-max-util
@@ -288,7 +279,7 @@
 			content-api-host-item-request-time
 			content-api-host-search-request-time
 			content-api-request-time
-			content-api-request-rate)))
+			content-api-request-rate))))
 
 	; TODO - check this - the alerta check seems non-sensical as it uses a static value	
 	; (streams
