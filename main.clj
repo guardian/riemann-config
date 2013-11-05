@@ -77,7 +77,11 @@
 		dedup-2-alert (edge-detection 2 log-info alerta)
 		dedup-4-alert (edge-detection 4 log-info alerta)]
 	(streams
-		(with :index-time (format "%.0f" (now)) index))
+		(with :index-time (format "%.0f" (now))
+			(where (service "heartbeat")
+				(with :ttl 180 index)
+			(else
+				index))))
 
 	(streams (parse-stream
 		(expired
@@ -85,7 +89,8 @@
 				(fn [event]
 					(let [metric (:metric event)]
 						((with {:event "GangliaHeartbeat" :group "Ganglia" :metric metric}
-								(major "No heartbeat from Ganglia agent" dedup-alert)) event)))
+							(switch-epoch-to-elapsed
+								(major "No heartbeat from Ganglia agent" dedup-alert)) event))))
 			log-info))))
 
 	(streams
@@ -132,7 +137,7 @@
 							(splitp > metric
 								last-hb-threshold
 									(switch-epoch-to-elapsed
-										(major "Heartbeat from Ganglia agent is stale" dedup-alert))
+										(minor "Heartbeat from Ganglia agent is stale" dedup-alert))
 									(switch-epoch-to-elapsed
 										(normal "Heartbeat from Ganglia agent is OK" dedup-alert))))))
 
