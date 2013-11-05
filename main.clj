@@ -83,15 +83,14 @@
 			(else
 				index))))
 
-	(streams (parse-stream
+	(streams
 		(expired
-			(match :service "heartbeat"
-				(fn [event]
-					(let [metric (:metric event)]
-						((with {:event "GangliaHeartbeat" :group "Ganglia" :metric metric}
-							(switch-epoch-to-elapsed
-								(major "No heartbeat from Ganglia agent" dedup-alert)) event))))
-			log-info))))
+			(parse-stream
+				(match :service "heartbeat"
+					(with {:event "GangliaHeartbeat" :group "Ganglia" }
+						(switch-epoch-to-elapsed
+							(major "No heartbeat from Ganglia agent" dedup-alert))))
+			log-info)))
 
 	(streams
 		(throttle 1 30 heartbeat))
