@@ -79,7 +79,7 @@
 	(streams
 		(with :index-time (format "%.0f" (now))
 			(where (service "heartbeat")
-				(with :ttl 180 index)
+				(with :ttl 600 index)
 			(else
 				index))))
 
