@@ -84,15 +84,6 @@
 				index))))
 
 	(streams
-		(expired
-			(parse-stream
-				(match :service "heartbeat"
-					(with {:event "GangliaHeartbeat" :group "Ganglia" }
-						(switch-epoch-to-elapsed
-							(major "No heartbeat from Ganglia agent" dedup-alert))))
-			log-info)))
-
-	(streams
 		(throttle 1 30 heartbeat))
 
 	(streams
@@ -119,6 +110,15 @@
 						:time (unix-time)
 						:metric (count @metrics)}))))
 
+
+	(streams
+		(expired
+			(parse-stream
+				(match :service "heartbeat"
+					(with {:event "GangliaHeartbeat" :group "Ganglia" }
+						(switch-epoch-to-elapsed
+							(major "No heartbeat from Ganglia agent" dedup-alert))))
+			log-info)))
 
 	(streams (parse-stream
 		(let [boot-threshold 
@@ -159,14 +159,14 @@
 
 			last-gumetric-collection
 				(match :service "gu_metric_last"
-					(with {:event "GuMgmtMetrics" :group "Ganglia"}
-						(let [last-run-threshold (- (now) 300)]
-							(splitp > metric
-								last-run-threshold
-									(switch-epoch-to-elapsed
-										(minor "Guardian management status metrics have not been updated for more than 5 minutes" dedup-alert))
-								(switch-epoch-to-elapsed
-									(normal "Guardian management status metrics are OK" dedup-alert))))))
+					(where (> metric 0)
+						(with {:event "GuMgmtMetrics" :group "Ganglia"}
+							(switch-epoch-to-elapsed
+								(splitp < metric
+									300 (major "Guardian management metrics not updated for 5 minutes or more" dedup-alert)
+									(normal "Guardian management metrics are reporting OK" dedup-alert))))
+					(else (with {:event "GuMgmtMetrics" :group "Ganglia"}
+						(warning "Guardian management metrics are stale or broken" dedup-alert)))))
 
 			disk-max-util
 				(match :service "part_max_used"
