@@ -119,6 +119,7 @@
 						:time (unix-time)
 						:metric (count @metrics)}))))
 
+
 	(streams (parse-stream
 		(let [boot-threshold 
 				(match :service "boottime"
@@ -142,14 +143,16 @@
 
 			puppet-last-run
 				(match :service "pup_last_run"
-					(with {:event "PuppetLastRun" :group "Puppet"}
-						(let [last-run-threshold (- (now) 7200)]
-							(splitp > metric
-								last-run-threshold
-									(switch-epoch-to-elapsed
-										(minor "Puppet agent has not run for at least 2 hours" dedup-alert))
-								(switch-epoch-to-elapsed
-									(normal "Puppet agent is OK" dedup-alert))))))
+					(where (> metric 0)
+						(with {:event "PuppetLastRun" :group "Puppet"}
+							(switch-epoch-to-elapsed
+								(splitp < metric
+									86400 (major "Puppet has not run in more than a day" dedup-alert) ; not run in last day
+									7200 (minor "Puppet has not run in last 2 hours" dedup-alert)  ; not run in last 2 hours
+									(normal "Puppet agent is running normally" dedup-alert))))
+					(else (with {:event "PuppetLastRun" :group "Puppet"}
+						(warning "Puppet metrics are stale or broken" dedup-alert)))))
+
 			puppet-resource-failed
 				(match :service "pup_res_failed"
 					(with {:event "PuppetResFailed" :group "Puppet"}
