@@ -133,13 +133,10 @@
 			heartbeat
 				(match :service "heartbeat"
 					(with {:event "GangliaHeartbeat" :group "Ganglia"}
-						(let [last-hb-threshold (- (now) 90)]
-							(splitp > metric
-								last-hb-threshold
-									(switch-epoch-to-elapsed
-										(minor "Heartbeat from Ganglia agent is stale" dedup-alert))
-									(switch-epoch-to-elapsed
-										(normal "Heartbeat from Ganglia agent is OK" dedup-alert))))))
+						(switch-epoch-to-elapsed
+							(splitp < metric
+								90 (minor "Heartbeat from Ganglia agent is stale" dedup-alert)
+								(normal "Heartbeat from Ganglia agent is OK" dedup-alert)))))
 
 			puppet-last-run
 				(match :service "pup_last_run"
