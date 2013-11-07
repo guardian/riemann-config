@@ -110,7 +110,6 @@
 						:time (unix-time)
 						:metric (count @metrics)}))))
 
-
 	(streams
 		(expired
 			(parse-stream
@@ -123,12 +122,9 @@
 	(streams (parse-stream
 		(let [boot-threshold 
 				(match :service "boottime"
-					(where* 
-						(fn [e] 
-							(let [boot-threshold (- (now) 7200)]
-								(> (:metric e) boot-threshold)))
-						(with {:event "SystemStart" :group "System"} 
-							(informational "System started less than 2 hours ago" dedup-alert))))
+					(with {:event "SystemStart" :group "System"}
+						(switch-epoch-to-elapsed
+							(where (< metric 7200) (informational "System started less than 2 hours ago" dedup-alert)))))
 
 			heartbeat
 				(match :service "heartbeat"
