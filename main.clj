@@ -215,6 +215,13 @@
 							90 (minor "Disk IO utilisation is high" dedup-alert)
 							(normal "Disk IO utilisation is OK" dedup-alert))))
 
+			r2-frontend-mode
+				(match :service "gu_currentMode_mode-r2frontend"
+					(with {:event "R2Mode" :service "R2"}
+						(where (= state "NORMAL")
+							(normal "R2 frontend mode is NORMAL" dedup-alert)
+						(else (major "R2 frontend mode is not normal" dedup-alert)))))
+
 			content-api-host-item-request-time
 				(where* (fn [e] (and (= (:grid e) "EC2")
 									(= (:environment e) "PROD")
@@ -280,6 +287,7 @@
 			swap-util
 			cpu-load-five
 			disk-io-util
+			r2-frontend-mode
 			content-api-host-item-request-time
 			content-api-host-search-request-time
 			content-api-request-time
