@@ -38,6 +38,7 @@
    :service [(get event :grid "Common")]
    :tags (:tags event)
    :text (:description event)
+   :type (:type event)
    :moreInfo
     (if-let [ip (:ip event)]
       (str "ssh -A " ip)
