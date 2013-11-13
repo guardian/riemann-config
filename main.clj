@@ -17,7 +17,7 @@
 (defn parse-stream
 	[& children]
 	(fn [e] (let [new-event (assoc e
-		:host (str (:environment e) ":" (:host e))
+		:host (str (:ip e) ":" (:host e))
 		:resource (:host e))]
 			(call-rescue new-event children))))
 
