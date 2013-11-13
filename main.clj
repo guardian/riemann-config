@@ -44,6 +44,10 @@
 	[& children]
 	(fn [e] ((apply with {:metric (- (now) (:metric e))} children) e)))
 
+(defn state-to-metric
+	[& children]
+	(fn [e] ((apply with {:metric (:state e)} children) e)))
+
 (defn lookup-metric
 	[metricname & children]
 	(let [metricsymbol (keyword metricname)]
@@ -110,14 +114,14 @@
 						:time (unix-time)
 						:metric (count @metrics)}))))
 
+
 	(streams
 		(expired
 			(parse-stream
 				(match :service "heartbeat"
 					(with {:event "GangliaHeartbeat" :group "Ganglia" }
 						(switch-epoch-to-elapsed
-							(major "No heartbeat from Ganglia agent" dedup-alert))))
-			log-info)))
+							(major "No heartbeat from Ganglia agent" dedup-alert) log-info))))))
 
 	(streams (parse-stream
 		(let [boot-threshold 
@@ -213,10 +217,11 @@
 
 			r2-frontend-mode
 				(match :service "gu_currentMode_mode-r2frontend"
-					(with {:event "R2Mode" :service "R2"}
-						(where (= state "NORMAL")
-							(normal "R2 frontend mode is NORMAL" dedup-alert)
-						(else (major "R2 frontend mode is not normal" dedup-alert)))))
+					(state-to-metric
+						(with {:event "R2Mode" :service "R2" :group "Application"}
+							(where (= state "NORMAL")
+								(normal "R2 frontend mode is OK" dedup-alert)
+							(else (major "R2 frontend mode is not OK" dedup-alert))))))
 
 			content-api-host-item-request-time
 				(where* (fn [e] (and (= (:grid e) "EC2")
@@ -283,7 +288,9 @@
 			swap-util
 			cpu-load-five
 			disk-io-util
+
 			r2-frontend-mode
+
 			content-api-host-item-request-time
 			content-api-host-search-request-time
 			content-api-request-time
