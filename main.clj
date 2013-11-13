@@ -218,7 +218,7 @@
 			r2-frontend-mode
 				(match :service "gu_currentMode_mode-r2frontend"
 					(state-to-metric
-						(with {:event "R2Mode" :service "R2" :group "Application"}
+						(with {:event "R2Mode" :service "R2" :group "Application" :type "serviceAlert"}
 							(where (= state "NORMAL")
 								(normal "R2 frontend mode is OK" dedup-alert)
 							(else (major "R2 frontend mode is not OK" dedup-alert))))))
