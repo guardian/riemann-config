@@ -121,7 +121,7 @@
 				(match :service "heartbeat"
 					(with {:event "GangliaHeartbeat" :group "Ganglia" }
 						(switch-epoch-to-elapsed
-							(major "No heartbeat from Ganglia agent" dedup-alert) log-info))))))
+							(minor "No heartbeat from Ganglia agent" dedup-alert) log-info))))))
 
 	(streams (parse-stream
 		(let [boot-threshold 
@@ -144,8 +144,8 @@
 						(with {:event "PuppetLastRun" :group "Puppet"}
 							(switch-epoch-to-elapsed
 								(splitp < metric
-									86400 (major "Puppet has not run in more than a day" dedup-alert) ; not run in last day
-									7200 (minor "Puppet has not run in last 2 hours" dedup-alert)  ; not run in last 2 hours
+									86400 (minor "Puppet has not run in more than a day" dedup-alert) ; not run in last day
+									7200 (warning "Puppet has not run in last 2 hours" dedup-alert)  ; not run in last 2 hours
 									(normal "Puppet agent is running normally" dedup-alert))))
 					(else (with {:event "PuppetLastRun" :group "Puppet"}
 						(warning "Puppet metrics are stale or broken" dedup-alert)))))
@@ -163,7 +163,7 @@
 						(with {:event "GuMgmtMetrics" :group "Ganglia"}
 							(switch-epoch-to-elapsed
 								(splitp < metric
-									300 (major "Guardian management metrics not updated for 5 minutes or more" dedup-alert)
+									300 (minor "Guardian management metrics not updated for 5 minutes or more" dedup-alert)
 									(normal "Guardian management metrics are reporting OK" dedup-alert))))
 					(else (with {:event "GuMgmtMetrics" :group "Ganglia"}
 						(warning "Guardian management metrics are stale or broken" dedup-alert)))))
