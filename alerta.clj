@@ -48,8 +48,12 @@
 (defn alerta
   "Creates an alerta adapter.
     (changed-state (alerta))"
-  [e]
-  (post-to-alerta (:alert alerta-endpoints) (format-alerta-event e)))
+  [opts]
+  (let [opts (merge {:socket-timeout 5000
+                     :conn-timeout 5000 } opts)]
+  (fn [event]
+    (when (:metric event)
+      (post-to-alerta (:alert alerta-endpoints) (format-alerta-event event))))))
 
 (defn heartbeat [e] (post-to-alerta
 	(:heartbeat alerta-endpoints)

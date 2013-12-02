@@ -70,12 +70,14 @@
 
 ; thresholding
 (let [index (default :ttl 900 (update-index (index)))
-		dedup-alert (edge-detection 1 log-info alerta)
-		dedup-2-alert (edge-detection 2 log-info alerta)
-		dedup-4-alert (edge-detection 4 log-info alerta)
-      graph (async-queue! :graphite {:queue-size 1000}
-                          (graphite {:host "graphite"
-                                     :path (fn [e] (str "riemann." (riemann.graphite/graphite-path-basic e)))}))]
+	alert (async-queue! :alerta {:queue-size 1000}
+		(alerta {}))
+	dedup-alert (edge-detection 1 log-info alert)
+	dedup-2-alert (edge-detection 2 log-info alert)
+	dedup-4-alert (edge-detection 4 log-info alert)
+	graph (async-queue! :graphite {:queue-size 1000}
+		(graphite {:host "graphite"
+			:path (fn [e] (str "riemann." (riemann.graphite/graphite-path-basic e)))}))]
 
 	(streams
 		(with :index-time (format "%.0f" (now))
