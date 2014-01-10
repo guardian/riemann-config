@@ -222,6 +222,14 @@
 								(normal "R2 frontend mode is OK" dedup-alert)
 							(else (major "R2 frontend mode is not OK" dedup-alert))))))
 
+			mysql-slave-lag
+				(match :service "mysql_slave_lag"
+					(with {:event "MySQLlag" :group "MySQL"}
+						(splitp < metric
+							14400 (major "MySQL Replication lag is very high" dedup-alert)
+							7200 (minor "MySQL Replication lag is high" dedup-alert)
+							(normal "MySQL Replication lag is OK" dedup-alert))))
+
 			content-api-host-item-request-time
 				(where* (fn [e] (and (= (:grid e) "EC2")
 									(= (:environment e) "PROD")
@@ -289,6 +297,8 @@
 			disk-io-util
 
 			r2-frontend-mode
+
+			mysql-slave-lag
 
 			content-api-host-item-request-time
 			content-api-host-search-request-time
