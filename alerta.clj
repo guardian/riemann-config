@@ -20,6 +20,11 @@
                 :accept :json
                 :throw-entire-message? true})))
 
+(defn key-value-split
+  "Split on equals, always returning two values."
+  [s]
+  (if (.contains s "=") (clojure.string/split s #"=" 2) [s ""]))
+
 (defn format-alerta-event
   "Formats an event for Alerta."
   [event]
@@ -36,7 +41,7 @@
    :severity (:state event)
    :environment [(get event :environment "INFRA")]
    :service [(get event :grid "Common")]
-   :tags (:tags event)
+   :tags (into {} (map #(key-value-split %) (:tags event)))
    :text (:description event)
    :type (:type event)
    :moreInfo
