@@ -46,7 +46,7 @@
    :type (:type event)
    :moreInfo
     (if-let [ip (:ip event)]
-      (str "ssh -A " ip)
+      (str "ssh " ip)
       "IP address not available" )
    :rawData event})
 
