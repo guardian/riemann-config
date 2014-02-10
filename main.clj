@@ -171,7 +171,7 @@
 				(match :service "part_max_used"
 					(with {:event "DiskMaxUtil" :group "OS"}
 						(splitp < metric
-							90 (warning "Disk utilisation for highest filesystem over threshold" dedup-alert)
+							99 (critical "Disk utilisation for highest filesystem over threshold" dedup-alert)
 							(normal "Disk utilisation for highest filesystem is under threshold" dedup-alert))))
 
 			fs-util
