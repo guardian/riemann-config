@@ -161,7 +161,7 @@
 
 			heartbeat
 				(match :service "heartbeat"
-					(with {:event "GangliaHeartbeat" :group "Ganglia"}
+					(with {:event "AgentHeartbeat" :group "Ganglia"}
 						(switch-epoch-to-elapsed
 							(splitp < metric
 								90 (minor "Heartbeat from Ganglia agent is stale" dedup-alert)
