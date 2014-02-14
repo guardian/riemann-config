@@ -41,6 +41,19 @@
 	[& children]
 	(fn [e] ((apply with {:metric (:state e)} children) e)))
 
+(defn event-to-cluster-event
+	[& children]
+	(fn [e] ((apply with {:service "cluster heartbeat"
+		:host (str (:environment e) ":" (:cluster e))
+		:resource (:cluster e)} children) e)))
+
+(defn event-to-grid-event
+	[& children]
+	(fn [e] ((apply with {:service "grid heartbeat"
+		:host (str (:environment e) ":" (:grid e))
+		:resource (:grid e)
+		:cluster "n/a"} children) e)))
+
 (defn lookup-metric
 	[metricname & children]
 	(let [metricsymbol (keyword metricname)]
@@ -82,7 +95,18 @@
 	(streams
 		(with :index-time (format "%.0f" (now))
 			(where (service "heartbeat")
-				(with :ttl 600 index)
+				(parse-stream
+					(with {:event "AgentHeartbeat" :group "Ganglia" :ttl 300}
+						(switch-epoch-to-elapsed
+							(normal "Heartbeat from Ganglia agent is OK" dedup-alert))) index)
+				(event-to-cluster-event
+					(with {:event "ClusterHeartbeat" :group "Ganglia" :ttl 180}
+						(switch-epoch-to-elapsed
+							(normal "Heartbeat from Ganglia cluster is OK" dedup-alert))) index)
+				(event-to-grid-event
+					(with {:event "GridHeartbeat" :group "Ganglia" :ttl 120}
+						(switch-epoch-to-elapsed
+							(normal "Heartbeat from Ganglia grid is OK" dedup-alert))) index)
 			(else
 				index))))
 
@@ -113,14 +137,20 @@
 						:time (unix-time)
 						:metric (count @metrics)}))))
 
-
 	(streams
 		(expired
-			(parse-stream
 				(match :service "heartbeat"
-					(with {:event "GangliaHeartbeat" :group "Ganglia" }
+					(with {:event "AgentHeartbeat" :group "Ganglia" }
 						(switch-epoch-to-elapsed
-							(minor "No heartbeat from Ganglia agent" dedup-alert) log-info))))))
+							(minor "No heartbeat from Ganglia agent" dedup-alert) log-info)))
+				(match :service "cluster heartbeat"
+					(with {:event "ClusterHeartbeat" :group "Ganglia" }
+						(switch-epoch-to-elapsed
+							(minor "No heartbeat from Ganglia cluster" dedup-alert) log-info)))
+				(match :service "grid heartbeat"
+					(with {:event "GridHeartbeat" :group "Ganglia" }
+						(switch-epoch-to-elapsed
+							(minor "No heartbeat from Ganglia grid" dedup-alert) log-info)))))
 
 	(streams (parse-stream
 		(let [boot-threshold 
@@ -283,7 +313,7 @@
 											(minor "Content API MQ total request rate is low" dedup-2-alert))))))))]
 
 		(where (not (state "expired"))
-                        ; prn
+			; prn
 			boot-threshold
 			heartbeat
 			disk-max-util
