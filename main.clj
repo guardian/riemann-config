@@ -146,11 +146,11 @@
 				(match :service "cluster heartbeat"
 					(with {:event "ClusterHeartbeat" :group "Ganglia" }
 						(switch-epoch-to-elapsed
-							(minor "No heartbeat from Ganglia cluster" dedup-alert) log-info)))
+							(major "No heartbeat from Ganglia cluster" dedup-alert) log-info)))
 				(match :service "grid heartbeat"
 					(with {:event "GridHeartbeat" :group "Ganglia" }
 						(switch-epoch-to-elapsed
-							(minor "No heartbeat from Ganglia grid" dedup-alert) log-info)))))
+							(critical "No heartbeat from Ganglia grid" dedup-alert) log-info)))))
 
 	(streams (parse-stream
 		(let [boot-threshold 
