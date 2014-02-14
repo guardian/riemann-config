@@ -96,9 +96,7 @@
 		(with :index-time (format "%.0f" (now))
 			(where (service "heartbeat")
 				(parse-stream
-					(with {:event "AgentHeartbeat" :group "Ganglia" :ttl 300}
-						(switch-epoch-to-elapsed
-							(normal "Heartbeat from Ganglia agent is OK" dedup-alert))) index)
+					(with :ttl 300 index)
 				(event-to-cluster-event
 					(with {:event "ClusterHeartbeat" :group "Ganglia" :ttl 180}
 						(switch-epoch-to-elapsed
