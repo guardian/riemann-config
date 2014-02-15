@@ -96,7 +96,7 @@
 		(with :index-time (format "%.0f" (now))
 			(where (service "heartbeat")
 				(parse-stream
-					(with :ttl 300 index)
+					(with :ttl 300 index))
 				(event-to-cluster-event
 					(with {:event "ClusterHeartbeat" :group "Ganglia" :ttl 180}
 						(switch-epoch-to-elapsed
