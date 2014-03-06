@@ -100,11 +100,13 @@
 				(event-to-cluster-event
 					(with {:event "ClusterHeartbeat" :group "Ganglia" :ttl 180}
 						(switch-epoch-to-elapsed
-							(normal "Heartbeat from Ganglia cluster is OK" dedup-alert))) index)
+							(where (< metric 20)
+								(normal "Heartbeat from Ganglia cluster is OK" dedup-alert))) index))
 				(event-to-grid-event
 					(with {:event "GridHeartbeat" :group "Ganglia" :ttl 120}
 						(switch-epoch-to-elapsed
-							(normal "Heartbeat from Ganglia grid is OK" dedup-alert))) index)
+							(where (< metric 20)
+								(normal "Heartbeat from Ganglia grid is OK" dedup-alert))) index))
 			(else
 				index))))
 
