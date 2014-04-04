@@ -330,10 +330,11 @@
 
                       mysql-slave-lag
 
-                      content-api-host-item-request-time
-                      content-api-host-search-request-time
-                      content-api-request-time
-                      content-api-request-rate))))
+                      ;content-api-host-item-request-time
+                      ;content-api-host-search-request-time
+                      ;content-api-request-time
+                      ;content-api-request-rate
+))))
 
   (streams
     (with {:metric 1 :host hostname :state "normal" :service "riemann events_sec"}
