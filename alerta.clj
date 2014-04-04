@@ -1,11 +1,11 @@
 ; -*- mode: clojure; -*-
 ; vim: filetype=clojure
 
-(def version "1.0.0")
+(def version "3.0.0")
 
 (def alerta-endpoints
-  {:alert "http://monitoring:8080/alerta/api/v2/alerts/alert.json"
-   :heartbeat "http://monitoring:8080/alerta/api/v2/heartbeats/heartbeat.json"})
+  {:alert "http://alerta:8080/api/alert"
+   :heartbeat "http://alerta:8080/api/heartbeat"})
 
 (defn post-to-alerta
   "POST to the Alerta REST API."
@@ -19,11 +19,6 @@
                   :content-type :json
                   :accept :json
                   :throw-entire-message? true})))
-
-(defn key-value-split
-  "Split on equals, always returning two values."
-  [s]
-  (if (.contains s "=") (clojure.string/split s #"=" 2) [s ""]))
 
 (defn format-alerta-event
   "Formats an event for Alerta."
@@ -39,15 +34,11 @@
    :group (get event :group "Performance")
    :value (:metric event)
    :severity (:state event)
-   :environment [(get event :environment "INFRA")]
+   :environment (get event :environment "INFRA")
    :service [(get event :grid "Common")]
-   :tags (into {} (map #(key-value-split %) (:tags event)))
+   :tags (:tags event)
    :text (:description event)
    :type (:type event)
-   :moreInfo
-   (if-let [ip (:ip event)]
-     (str "ssh " ip)
-     "IP address not available" )
    :rawData event})
 
 (defn alerta
@@ -63,5 +54,5 @@
 (defn heartbeat [e] (post-to-alerta
                       (:heartbeat alerta-endpoints)
                       {:origin (str "riemann/" hostname)
-                       :version version
+                       :tags [version]
                        :type "Heartbeat"}))
