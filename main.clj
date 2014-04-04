@@ -335,48 +335,6 @@
                       content-api-request-time
                       content-api-request-rate))))
 
-  ; TODO - check this - the alerta check seems non-sensical as it uses a static value
-  ; (streams
-  ; 	(match :grid "Frontend"
-  ; 		(with {:event "NgnixError" :group "Web"}
-  ; 			(splitp < metric
-  ; 				0 (minor "There are status code 499 client errors")
-  ; 				(normal "No status code 499 client errors")))))
-
   (streams
     (with {:metric 1 :host hostname :state "normal" :service "riemann events_sec"}
-          (rate 10 index graph)))
-
-  (streams
-    (let [success-service-name #"^gu_200_ok_request_status_rate-frontend-"
-          error-service-name "gu_js_diagnostics_rate-frontend-diagnostics"]
-      (where (and metric (or (service success-service-name) (service error-service-name)))
-             (by [:environment]
-                 (moving-time-window 60
-                                     (smap (fn [events]
-                                             (let [service-filter (fn [service-name event] (riemann.common/match service-name (:service event)))
-                                                   sum riemann.folds/sum
-                                                   total-success (->> events (filter (partial service-filter success-service-name)) sum)
-                                                   total-error (->> events (filter (partial service-filter error-service-name)) sum)
-                                                   threshold 0.10]
-                                               (if (and total-success total-error)
-                                                 (let [ratio (double (/ (:metric total-error) (:metric total-success)))
-                                                       environment (:environment total-success)
-                                                       grid (:grid total-success)
-                                                       new-event {	:host "riemann"
-                                                                  :service "frontend_js_error_ratio"
-                                                                  :metric ratio
-                                                                  :environment environment
-                                                                  :group "Frontend"
-                                                                  :resource grid
-                                                                  :event "JsErrorRate"}]
-                                                   (do
-                                                     (debug
-                                                       (format "%s: Events seen %d; ratio %f; status %s"
-                                                               environment
-                                                               (count events)
-                                                               ratio
-                                                               (if (> ratio threshold) "bad" "okay")))
-                                                     (if (> ratio threshold)
-                                                       (call-rescue new-event [(minor "JS error rate unexpectedly high" dedup-4-alert)])
-                                                       (call-rescue new-event [(normal "JS error rate within limits" dedup-4-alert)]))))))))))))))
+          (rate 10 index graph))))
