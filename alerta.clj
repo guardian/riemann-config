@@ -39,6 +39,7 @@
    :tags (:tags event)
    :text (:description event)
    :type (:type event)
+   :attributes {:ipAddress (:ip event)}
    :rawData event})
 
 (defn alerta
