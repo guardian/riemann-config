@@ -113,29 +113,29 @@
   (streams
     (throttle 1 30 heartbeat))
 
-  (streams
-    (let [hosts (atom #{})]
-      (fn [event]
-        (swap! hosts conj (:host event))
-        (index {:service "unique hosts"
-                :time (unix-time)
-                :metric (count @hosts)})
-        ((throttle 1 10 graph) {:service "riemann unique_hosts"
-                                :host hostname
-                                :time (unix-time)
-                                :metric (count @hosts)}))))
+;  (streams
+;    (let [hosts (atom #{})]
+;      (fn [event]
+;        (swap! hosts conj (:host event))
+;        (index {:service "unique hosts"
+;                :time (unix-time)
+;                :metric (count @hosts)})
+;        ((throttle 1 10 graph) {:service "riemann unique_hosts"
+;                                :host hostname
+;                                :time (unix-time)
+;                                :metric (count @hosts)}))))
 
-  (streams
-    (let [metrics (atom #{})]
-      (fn [event]
-        (swap! metrics conj {:host (:host event) :service (:service event)})
-        (index {:service "unique services"
-                :time (unix-time)
-                :metric (count @metrics)})
-        ((throttle 1 10 graph) {:service "riemann unique_services"
-                                :host hostname
-                                :time (unix-time)
-                                :metric (count @metrics)}))))
+;  (streams
+;    (let [metrics (atom #{})]
+;      (fn [event]
+;        (swap! metrics conj {:host (:host event) :service (:service event)})
+;        (index {:service "unique services"
+;                :time (unix-time)
+;                :metric (count @metrics)})
+;        ((throttle 1 10 graph) {:service "riemann unique_services"
+;                                :host hostname
+;                                :time (unix-time)
+;                                :metric (count @metrics)}))))
 
   (streams
     (expired
