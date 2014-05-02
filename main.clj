@@ -76,14 +76,14 @@
 
 (defn edge-detection
   [samples & children]
-  (let [detector (by [:host :service] (runs samples :state (apply changed :state {:init "normal"} children)))]
+  (let [detector (by [:host :service] (runs samples :state (apply changed :state children)))]
     (fn [e] (detector e))))
 
 (defn set-resource-from-cluster [e] (assoc e :resource (:cluster e)))
 
 ; thresholding
 (let [index (default :ttl 900 (update-index (index)))
-      alert (async-queue! :alerta {:queue-size 1000}
+      alert (async-queue! :alerta {:queue-size 10000}
                           (alerta {}))
       dedup-alert (edge-detection 1 log-info alert)
       dedup-2-alert (edge-detection 2 log-info alert)
