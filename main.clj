@@ -82,7 +82,7 @@
 (defn set-resource-from-cluster [e] (assoc e :resource (:cluster e)))
 
 ; thresholding
-(let [index (default :ttl 900 (update-index (index)))
+(let [index (default :ttl 900 (index))
       alert (async-queue! :alerta {:queue-size 10000}
                           (alerta {}))
       dedup-alert (edge-detection 1 log-info alert)
