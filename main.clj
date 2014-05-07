@@ -27,7 +27,7 @@
 
 
 ; reap expired events every 10 seconds
-(periodically-expire 10 {:keep-keys [:host :service :environment :grid :cluster :ip :tags :metric :index-time]})
+(periodically-expire 10 {:keep-keys [:host :service :environment :resource :grid :cluster :ip :tags :metric :index-time]})
 
 ; some helpful functions
 (defn now []
