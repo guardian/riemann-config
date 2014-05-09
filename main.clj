@@ -15,7 +15,6 @@
 (repl-server)
 
 (graphite-server :host "0.0.0.0"
-                 :port 3003
                  :protocol :tcp
                  :parser-fn (fn [{:keys [service] :as event}]
                               (if-let [[source metric]
