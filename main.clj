@@ -14,11 +14,44 @@
 (ws-server :host "0.0.0.0")
 (repl-server)
 
+(graphite-server :host "0.0.0.0"
+                 :port 3003
+                 :protocol :tcp
+                 :parser-fn (fn [{:keys [service] :as event}]
+                              (if-let [[source metric]
+                                       (clojure.string/split service #"\." 2)]
+                                (case source
+                                  "fastly" (if-let [[domain service] (clojure.string/split metric #"\." 2)]
+                                             {:host domain
+                                              :service service
+                                              :metric (:metric event)
+                                              :origin "Fastly"
+                                              :environment "PROD"
+                                              :resource domain
+                                              :type "graphiteAlert"
+                                              :time (:time event)
+                                              :source source
+                                              })
+                                  "cloudwatch" (if-let [[account & metric] (clojure.string/split metric #"\.")]
+                                                 (let [host (clojure.string/join ":" (butlast metric))]
+                                                   {:host host
+                                                    :service (last metric)
+                                                    :metric (:metric event)
+                                                    :origin (clojure.string/capitalize account)
+                                                    :environment "PROD" ; FIXME - use "stage" if available
+                                                    :resource host
+                                                    :type "graphiteAlert"
+                                                    :time (:time event)
+                                                    :tags (into [] metric)
+                                                    :source source
+                                                    }))))))
+
 (defn parse-stream
   [& children]
   (fn [e] (let [new-event (assoc e
                             :host (str (:ip e) ":" (:host e))
-                            :resource (:host e))]
+                            :resource (:host e)
+                            :type "gangliaAlert")]
             (call-rescue new-event children))))
 
 (defn log-info
@@ -98,12 +131,12 @@
                  (parse-stream
                    (with :ttl 300 index))
                  (event-to-cluster-event
-                   (with {:event "ClusterHeartbeat" :group "Ganglia" :ttl 180}
+                   (with {:event "ClusterHeartbeat" :group "Ganglia" :type "gangliaAlert" :ttl 180}
                          (switch-epoch-to-elapsed
                            (where (< metric 20)
                                   (normal "Heartbeat from Ganglia cluster is OK" dedup-alert))) index))
                  (event-to-grid-event
-                   (with {:event "GridHeartbeat" :group "Ganglia" :ttl 120}
+                   (with {:event "GridHeartbeat" :group "Ganglia" :type "gangliaAlert" :ttl 120}
                          (switch-epoch-to-elapsed
                            (where (< metric 20)
                                   (normal "Heartbeat from Ganglia grid is OK" dedup-alert))) index))
@@ -113,42 +146,42 @@
   (streams
     (throttle 1 30 heartbeat))
 
-;  (streams
-;    (let [hosts (atom #{})]
-;      (fn [event]
-;        (swap! hosts conj (:host event))
-;        (index {:service "unique hosts"
-;                :time (unix-time)
-;                :metric (count @hosts)})
-;        ((throttle 1 10 graph) {:service "riemann unique_hosts"
-;                                :host hostname
-;                                :time (unix-time)
-;                                :metric (count @hosts)}))))
+  ;  (streams
+  ;    (let [hosts (atom #{})]
+  ;      (fn [event]
+  ;        (swap! hosts conj (:host event))
+  ;        (index {:service "unique hosts"
+  ;                :time (unix-time)
+  ;                :metric (count @hosts)})
+  ;        ((throttle 1 10 graph) {:service "riemann unique_hosts"
+  ;                                :host hostname
+  ;                                :time (unix-time)
+  ;                                :metric (count @hosts)}))))
 
-;  (streams
-;    (let [metrics (atom #{})]
-;      (fn [event]
-;        (swap! metrics conj {:host (:host event) :service (:service event)})
-;        (index {:service "unique services"
-;                :time (unix-time)
-;                :metric (count @metrics)})
-;        ((throttle 1 10 graph) {:service "riemann unique_services"
-;                                :host hostname
-;                                :time (unix-time)
-;                                :metric (count @metrics)}))))
+  ;  (streams
+  ;    (let [metrics (atom #{})]
+  ;      (fn [event]
+  ;        (swap! metrics conj {:host (:host event) :service (:service event)})
+  ;        (index {:service "unique services"
+  ;                :time (unix-time)
+  ;                :metric (count @metrics)})
+  ;        ((throttle 1 10 graph) {:service "riemann unique_services"
+  ;                                :host hostname
+  ;                                :time (unix-time)
+  ;                                :metric (count @metrics)}))))
 
   (streams
     (expired
       (match :service "heartbeat"
-             (with {:event "AgentHeartbeat" :group "Ganglia" }
+             (with {:event "AgentHeartbeat" :group "Ganglia" :type "gangliaAlert"}
                    (switch-epoch-to-elapsed
                      (minor "No heartbeat from Ganglia agent" dedup-alert) log-info)))
       (match :service "cluster heartbeat"
-             (with {:event "ClusterHeartbeat" :group "Ganglia" }
+             (with {:event "ClusterHeartbeat" :group "Ganglia" :type "gangliaAlert"}
                    (switch-epoch-to-elapsed
                      (minor "No heartbeat from Ganglia cluster" dedup-alert) log-info)))
       (match :service "grid heartbeat"
-             (with {:event "GridHeartbeat" :group "Ganglia" }
+             (with {:event "GridHeartbeat" :group "Ganglia" :type "gangliaAlert"}
                    (switch-epoch-to-elapsed
                      (major "No heartbeat from Ganglia grid" dedup-alert) log-info)))))
 
@@ -247,7 +280,7 @@
                    r2-frontend-mode
                    (match :service "gu_currentMode_mode-r2frontend"
                           (state-to-metric
-                            (with {:event "R2Mode" :service "R2" :group "Application" :type "serviceAlert"}
+                            (with {:event "R2Mode" :service "R2" :group "Application"}
                                   (where (= state "NORMAL")
                                          (normal "R2 frontend mode is OK" dedup-alert)
                                          (else (major "R2 frontend mode is not OK" dedup-alert))))))
@@ -334,7 +367,22 @@
                       ;content-api-host-search-request-time
                       ;content-api-request-time
                       ;content-api-request-rate
-))))
+                      ))))
+
+  (streams
+    (where* #(= "cloudwatch" (:source %))
+            (match :service "HTTPCode_Backend_5XX"
+                   (with {:event "Http5xxErrors" :group "ELB"}
+                         (splitp < metric
+                                 5 (major "HTTP 500s served by ELB are very high" dedup-alert)
+                                 2 (minor "HTTP 500s served by ELB are high" dedup-alert)
+                                 (normal "HTTP 500s served by ELB are OK" dedup-alert))))
+            (match :service "Latency"
+                   (with {:event "HttpLatency" :group "ELB"}
+                         (splitp < metric
+                                 5 (major "Request latency of ELB is very high" dedup-alert)
+                                 2 (minor "Request latency of ELB is high" dedup-alert)
+                                 (normal "Request latency of ELB is OK" dedup-alert))))))
 
   (streams
     (with {:metric 1 :host hostname :state "normal" :service "riemann events_sec"}

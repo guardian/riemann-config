@@ -20,7 +20,7 @@
                   :accept :json
                   :throw-entire-message? true})))
 
-(defn format-alerta-event
+(defn format-ganglia-event
   "Formats an event for Alerta."
   [event]
   {
@@ -42,6 +42,23 @@
    :attributes {:ipAddress (:ip event)}
    :rawData event})
 
+(defn format-graphite-event
+  "Formats an event for Alerta."
+  [event]
+  {
+   :origin (str "riemann/" hostname)
+   :resource (:resource event)
+   :event (get event :event (:service event))
+   :group (get event :group "Performance")
+   :value (:metric event)
+   :severity (:state event)
+   :environment (get event :environment "PROD")
+   :service [(get event :origin "Unknown")]
+   :tags (:tags event)
+   :text (:description event)
+   :type (:type event)
+   :rawData event})
+
 (defn alerta
   "Creates an alerta adapter.
   (changed-state (alerta))"
@@ -49,8 +66,10 @@
   (let [opts (merge {:socket-timeout 5000
                      :conn-timeout 5000 } opts)]
     (fn [event]
-      (when (:metric event)
-        (post-to-alerta (:alert alerta-endpoints) (format-alerta-event event))))))
+      (case (:type event)
+        "gangliaAlert" (post-to-alerta (:alert alerta-endpoints) (format-ganglia-event event))
+        "graphiteAlert" (post-to-alerta (:alert alerta-endpoints) (format-graphite-event event))
+        (post-to-alerta (:alert alerta-endpoints) (format-ganglia-event event))))))
 
 (defn heartbeat [e] (post-to-alerta
                       (:heartbeat alerta-endpoints)
