@@ -373,8 +373,8 @@
             (match :service "HTTPCode_Backend_5XX"
                    (with {:event "Http5xxErrors" :group "ELB"}
                          (splitp < metric
-                                 10 (minor "HTTP 500s served by ELB are very high" dedup-alert)
-                                 2 (warning "HTTP 500s served by ELB are high" dedup-alert)
+                                 100 (minor "HTTP 500s served by ELB are very high" dedup-alert)
+                                 50 (warning "HTTP 500s served by ELB are high" dedup-alert)
                                  (normal "HTTP 500s served by ELB are OK" dedup-alert))))
             (match :service "Latency"
                    (with {:event "HttpLatency" :group "ELB"}
