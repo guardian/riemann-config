@@ -389,7 +389,7 @@
                                      (splitp < metric
                                              25 (major "Percentage of 500s for the backend service is very high" dedup-2-alert)
                                              10 (minor "Percentage of 500s for the backend service is high" dedup-2-alert)
-                                             (normal "Percentage of 500s for the backend service is OK" dedup-2-alert))))))
+                                             (normal "Percentage of 500s for the backend service is OK" dedup-alert))))))
 
             (match :service "Latency"
                    (with {:event "HttpLatency" :group "ELB"}
