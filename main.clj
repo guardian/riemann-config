@@ -43,6 +43,7 @@
                                                     :time (:time event)
                                                     :tags (into [] metric)
                                                     :source source
+                                                    :ttl 300
                                                     }))))))
 
 (defn parse-stream
@@ -112,6 +113,16 @@
     (fn [e] (detector e))))
 
 (defn set-resource-from-cluster [e] (assoc e :resource (:cluster e)))
+
+(defn proportion
+  [events]
+  (when-let [event (first events)]
+    (try
+      (riemann.folds/fold-all (fn [a b] (* (/ a (+ a b)) 100)) events)
+      (catch ArithmeticException e
+        (merge event
+               {:metric nil
+                :description "Can't divide by zero"})))))
 
 ; thresholding
 (let [index (default :ttl 900 (index))
@@ -370,18 +381,23 @@
 
   (streams
     (where* #(= "cloudwatch" (:source %))
-            (match :service "HTTPCode_Backend_5XX"
-                   (with {:event "Http5xxErrors" :group "ELB"}
-                         (splitp < metric
-                                 100 (minor "HTTP 500s served by ELB are very high" dedup-alert)
-                                 50 (warning "HTTP 500s served by ELB are high" dedup-alert)
-                                 (normal "HTTP 500s served by ELB are OK" dedup-alert))))
+            (by [:host]
+                (project [(service "HTTPCode_Backend_5XX")
+                          (service "HTTPCode_Backend_2XX")]
+                         (smap proportion
+                               (with {:service "Http5xxErrors" :group "ELB"}
+                                     (splitp < metric
+                                             25 (major "Percentage of 500s for the backend service is very high" dedup-2-alert)
+                                             10 (minor "Percentage of 500s for the backend service is high" dedup-2-alert)
+                                             (normal "Percentage of 500s for the backend service is OK" dedup-2-alert))))))
+
             (match :service "Latency"
                    (with {:event "HttpLatency" :group "ELB"}
                          (splitp < metric
-                                 10 (minor "Request latency of ELB is very high" dedup-alert)
-                                 2 (warning "Request latency of ELB is high" dedup-alert)
-                                 (normal "Request latency of ELB is OK" dedup-alert))))))
+                                 15 (minor "Request latency of ELB is very high" dedup-alert)
+                                 5 (warning "Request latency of ELB is high" dedup-alert)
+                                 (normal "Request latency of ELB is OK" dedup-alert))))
+            )) ; (streams (where* ...))
 
   (streams
     (with {:metric 1 :host hostname :state "normal" :service "riemann events_sec"}
