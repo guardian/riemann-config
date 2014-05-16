@@ -118,7 +118,7 @@
   [events]
   (when-let [event (first events)]
     (try
-      (riemann.folds/fold-all (fn [a b] (* (/ a (+ a b)) 100)) events)
+      (riemann.folds/fold-all (fn [a b] (/ a (+ a b))) events)
       (catch ArithmeticException e
         (merge event
                {:metric nil
@@ -387,8 +387,8 @@
                          (smap proportion
                                (with {:service "Http5xxErrors" :group "ELB"}
                                      (splitp < metric
-                                             25 (major "Percentage of 500s for the backend service is very high" dedup-2-alert)
-                                             10 (minor "Percentage of 500s for the backend service is high" dedup-2-alert)
+                                             25 (minor "Percentage of 500s for the backend service is very high" dedup-2-alert)
+                                             10 (warning "Percentage of 500s for the backend service is high" dedup-2-alert)
                                              (normal "Percentage of 500s for the backend service is OK" dedup-alert))))))
 
             (match :service "Latency"
