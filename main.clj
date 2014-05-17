@@ -29,7 +29,7 @@
                                               :resource domain
                                               :type "graphiteAlert"
                                               :time (:time event)
-                                              :source source
+                                              :tags [source]
                                               })
                                   "cloudwatch" (if-let [[account & metric] (clojure.string/split metric #"\.")]
                                                  (let [host (clojure.string/join ":" (butlast metric))]
@@ -41,8 +41,7 @@
                                                     :resource host
                                                     :type "graphiteAlert"
                                                     :time (:time event)
-                                                    :tags (into [] metric)
-                                                    :source source
+                                                    :tags (into [source] metric)
                                                     :ttl 300
                                                     }))))))
 
@@ -380,16 +379,18 @@
                       ))))
 
   (streams
-    (where* #(= "cloudwatch" (:source %))
-            (by [:host]
-                (project [(service "HTTPCode_Backend_5XX")
-                          (service "HTTPCode_Backend_2XX")]
-                         (smap proportion
-                               (with {:service "Http5xxErrors" :group "ELB"}
-                                     (splitp < metric
-                                             25 (minor "Percentage of 500s for the backend service is very high" dedup-2-alert)
-                                             10 (warning "Percentage of 500s for the backend service is high" dedup-2-alert)
-                                             (normal "Percentage of 500s for the backend service is OK" dedup-alert))))))
+    (where (tagged "cloudwatch")
+           (by [:host]
+               (where (or (and (> (metric 100)) (= (service "HTTPCode_Backend_2XX")))
+                          (= (service "HTTPCode_Backend_5XX")))
+                      (project [(service "HTTPCode_Backend_5XX")
+                                (service "HTTPCode_Backend_2XX")]
+                               (smap proportion
+                                     (with {:service "Http5xxErrors" :group "ELB"}
+                                           (splitp < metric
+                                                   0.25 (minor "Percentage of 500s for the backend service is very high" dedup-2-alert)
+                                                   0.1 (warning "Percentage of 500s for the backend service is high" dedup-2-alert)
+                                                   (normal "Percentage of 500s for the backend service is OK" dedup-alert)))))))
 
             (match :service "Latency"
                    (with {:event "HttpLatency" :group "ELB"}
