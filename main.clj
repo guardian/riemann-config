@@ -42,7 +42,7 @@
                                                     :type "graphiteAlert"
                                                     :time (:time event)
                                                     :tags (into [source account] metric)
-                                                    :ttl 300
+                                                    :ttl 600  ; metrics gathered every 5 minutes
                                                     }))))))
 
 (defn parse-stream
@@ -378,6 +378,7 @@
 
   (streams
     (where (tagged "cloudwatch")
+       (where (not (expired? event))
            (by [:host]
                (project [(service "HTTPCode_Backend_5XX")
                          (and (service "HTTPCode_Backend_2XX") (> metric 100.0))]
@@ -395,6 +396,11 @@
                                  15 (minor "Request latency of ELB is very high" dedup-alert)
                                  5 (warning "Request latency of ELB is high" dedup-alert)
                                  (normal "Request latency of ELB is OK" dedup-alert))))
+        )
+        (expired
+          (match :service "HTTPCode_Backend_2XX"
+                 (with {:event "Http5xxErrors" :group "ELB"}
+                       (normal "Percentage of 500s for backend service is OK" dedup-alert))))
   ))
 
   (streams
