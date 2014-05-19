@@ -41,7 +41,7 @@
                                                     :resource host
                                                     :type "graphiteAlert"
                                                     :time (:time event)
-                                                    :tags (into [source] metric)
+                                                    :tags (into [source account] metric)
                                                     :ttl 300
                                                     }))))))
 
@@ -118,10 +118,8 @@
   (when-let [event (first events)]
     (try
       (riemann.folds/fold-all (fn [a b] (/ a (+ a b))) events)
-      (catch ArithmeticException e
-        (merge event
-               {:metric nil
-                :description "Can't divide by zero"})))))
+      (catch NullPointerException ex
+        (merge event :metric nil)))))
 
 ; thresholding
 (let [index (default :ttl 900 (index))
@@ -381,11 +379,10 @@
   (streams
     (where (tagged "cloudwatch")
            (by [:host]
-               (where (or (and (> (metric 100)) (= (service "HTTPCode_Backend_2XX")))
-                          (= (service "HTTPCode_Backend_5XX")))
-                      (project [(service "HTTPCode_Backend_5XX")
-                                (service "HTTPCode_Backend_2XX")]
-                               (smap proportion
+               (project [(service "HTTPCode_Backend_5XX")
+                         (and (service "HTTPCode_Backend_2XX") (> metric 100.0))]
+                        (smap proportion
+                              (where (not (nil? (:metric event)))
                                      (with {:service "Http5xxErrors" :group "ELB"}
                                            (splitp < metric
                                                    0.25 (minor "Percentage of 500s for the backend service is very high" dedup-2-alert)
@@ -398,7 +395,7 @@
                                  15 (minor "Request latency of ELB is very high" dedup-alert)
                                  5 (warning "Request latency of ELB is high" dedup-alert)
                                  (normal "Request latency of ELB is OK" dedup-alert))))
-            )) ; (streams (where* ...))
+  ))
 
   (streams
     (with {:metric 1 :host hostname :state "normal" :service "riemann events_sec"}
