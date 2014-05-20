@@ -398,8 +398,8 @@
                                  (normal "Request latency of ELB is OK" dedup-alert))))
         )
         (expired
-          (match :service "HTTPCode_Backend_2XX"
-                 (with {:event "Http5xxErrors" :group "ELB"}
+          (match :service "HTTPCode_Backend_5XX"
+                 (with {:event "Http5xxErrors" :group "ELB" :metric 0.0}
                        (normal "Percentage of 500s for backend service is OK" dedup-alert))))
   ))
 
