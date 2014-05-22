@@ -32,7 +32,7 @@
      (:resource event))
    :event (get event :event (:service event))
    :group (get event :group "Performance")
-   :value (:metric event)
+   :value (str (:metric event))
    :severity (:state event)
    :environment (get event :environment "INFRA")
    :service [(get event :grid "Common")]
@@ -50,7 +50,7 @@
    :resource (:resource event)
    :event (get event :event (:service event))
    :group (get event :group "Performance")
-   :value (:metric event)
+   :value (str (:metric event))
    :severity (:state event)
    :environment (get event :environment "PROD")
    :service [(get event :origin "Unknown")]
