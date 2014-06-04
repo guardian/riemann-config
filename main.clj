@@ -278,11 +278,13 @@
 
                    disk-io-util
                    (match :service #"^diskio_util-"
-                          (with {:event "DiskIOUtil" :group "OS"}
-                                (splitp < metric
-                                        99 (major "Disk IO utilisation is very high" dedup-4-alert)
-                                        95 (minor "Disk IO utilisation is high" dedup-4-alert)
-                                        (normal "Disk IO utilisation is OK" dedup-4-alert))))
+                          (by [:host :service]
+                              (stable 600 :metric
+                                      (with {:event "DiskIOUtil" :group "OS"}
+                                            (splitp < metric
+                                                    99 (major "Disk IO utilisation is very high" dedup-alert)
+                                                    95 (minor "Disk IO utilisation is high" dedup-alert)
+                                                    (normal "Disk IO utilisation is OK" dedup-alert))))))
 
                    r2-frontend-mode
                    (match :service "gu_currentMode_mode-r2frontend"
