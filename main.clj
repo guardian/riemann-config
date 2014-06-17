@@ -379,32 +379,5 @@
                       ))))
 
   (streams
-    (where (tagged "cloudwatch")
-       (where (not (expired? event))
-           (by [:host]
-               (project [(service "HTTPCode_Backend_5XX")
-                         (and (service "HTTPCode_Backend_2XX") (> metric 100.0))]
-                        (smap proportion
-                              (where (not (nil? (:metric event)))
-                                     (with {:service "Http5xxErrors" :group "ELB"}
-                                           (splitp < metric
-                                                   0.25 (minor "Percentage of 500s for the backend service is very high" dedup-2-alert)
-                                                   0.1 (warning "Percentage of 500s for the backend service is high" dedup-2-alert)
-                                                   (normal "Percentage of 500s for the backend service is OK" dedup-alert)))))))
-
-            (match :service "Latency"
-                   (with {:event "HttpLatency" :group "ELB"}
-                         (splitp < metric
-                                 15 (minor "Request latency of ELB is very high" dedup-alert)
-                                 5 (warning "Request latency of ELB is high" dedup-alert)
-                                 (normal "Request latency of ELB is OK" dedup-alert))))
-        )
-        (expired
-          (match :service "HTTPCode_Backend_5XX"
-                 (with {:event "Http5xxErrors" :group "ELB" :metric 0.0}
-                       (normal "Percentage of 500s for backend service is OK" dedup-alert))))
-  ))
-
-  (streams
     (with {:metric 1 :host hostname :state "normal" :service "riemann events_sec"}
           (rate 10 index graph))))
