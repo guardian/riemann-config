@@ -302,6 +302,14 @@
                                         7200 (minor "MySQL Replication lag is high" dedup-alert)
                                         (normal "MySQL Replication lag is OK" dedup-alert))))
 
+                   ntp-offset
+                   (match :service "ntp_offset"
+                          (with {:event "NTPOffset" :group "OS"}
+                                (split
+                                       (or (< 10000 metric) (> -10000 metric)) (major "NTP offset is very high (±10s)" dedup-alert)
+                                       (or (< 2000 metric) (> -2000 metric)) (minor "NTP offset is high (±2s)" dedup-alert)
+                                       (normal "NTP offset is OK" dedup-alert))))
+
                    content-api-host-item-request-time
                    (where* (fn [e] (and (= (:grid e) "EC2")
                                         (= (:environment e) "PROD")
@@ -371,6 +379,7 @@
                       r2-frontend-mode
 
                       mysql-slave-lag
+                      ntp-offset
 
                       ;content-api-host-item-request-time
                       ;content-api-host-search-request-time
